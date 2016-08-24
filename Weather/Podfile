@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'Weather'
+
+pod 'RxSwift'
+pod 'RxCocoa'
+pod 'RxDataSources'
+pod 'Alamofire'
+pod 'ObjectMapper'
+pod 'pop'
+
