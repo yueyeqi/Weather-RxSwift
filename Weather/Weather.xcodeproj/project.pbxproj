@@ -7,23 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5B94AC1B1D75572E00B034D2 /* HeaderView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5B94AC1A1D75572E00B034D2 /* HeaderView.xib */; };
+		5B94AC1D1D75574E00B034D2 /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B94AC1C1D75574E00B034D2 /* HeaderView.swift */; };
+		5B94AC231D756DA800B034D2 /* WeatherTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B94AC221D756DA800B034D2 /* WeatherTableViewCell.swift */; };
+		5B9E7E8A1D70333700197A71 /* WeatherAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9E7E891D70333700197A71 /* WeatherAPI.swift */; };
+		5B9E7E8C1D703FD200197A71 /* WeatherModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9E7E8B1D703FD200197A71 /* WeatherModel.swift */; };
+		5B9E7E971D73E7E400197A71 /* UIColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B9E7E961D73E7E400197A71 /* UIColor.swift */; };
+		5BA6E4601D78406C00BB60DA /* ChangeCityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BA6E45F1D78406C00BB60DA /* ChangeCityView.swift */; };
 		5BAC86B91D6D4F8A008C1828 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAC86B81D6D4F8A008C1828 /* AppDelegate.swift */; };
 		5BAC86BB1D6D4F8A008C1828 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAC86BA1D6D4F8A008C1828 /* ViewController.swift */; };
 		5BAC86BE1D6D4F8A008C1828 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5BAC86BC1D6D4F8A008C1828 /* Main.storyboard */; };
 		5BAC86C01D6D4F8A008C1828 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 5BAC86BF1D6D4F8A008C1828 /* Assets.xcassets */; };
 		5BAC86C31D6D4F8A008C1828 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 5BAC86C11D6D4F8A008C1828 /* LaunchScreen.storyboard */; };
+		5BAC86CE1D6EF487008C1828 /* HamburgerButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BAC86CD1D6EF487008C1828 /* HamburgerButton.swift */; };
 		BA00C3350EA8264AE46C50B6 /* Pods_Weather.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F922E65023ABEBD6868DF6A8 /* Pods_Weather.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2F090946DA048E297B0C14AB /* Pods-Weather.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Weather.release.xcconfig"; path = "Pods/Target Support Files/Pods-Weather/Pods-Weather.release.xcconfig"; sourceTree = "<group>"; };
-		5BAC86B51D6D4F8A008C1828 /* Weather.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Weather.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5B2403061D794E41005FB9C0 /* NotificationCenter.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = NotificationCenter.framework; path = System/Library/Frameworks/NotificationCenter.framework; sourceTree = SDKROOT; };
+		5B94AC1A1D75572E00B034D2 /* HeaderView.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = HeaderView.xib; sourceTree = "<group>"; };
+		5B94AC1C1D75574E00B034D2 /* HeaderView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
+		5B94AC221D756DA800B034D2 /* WeatherTableViewCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherTableViewCell.swift; sourceTree = "<group>"; };
+		5B9E7E891D70333700197A71 /* WeatherAPI.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherAPI.swift; sourceTree = "<group>"; };
+		5B9E7E8B1D703FD200197A71 /* WeatherModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = WeatherModel.swift; sourceTree = "<group>"; };
+		5B9E7E961D73E7E400197A71 /* UIColor.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UIColor.swift; sourceTree = "<group>"; };
+		5BA6E45F1D78406C00BB60DA /* ChangeCityView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChangeCityView.swift; sourceTree = "<group>"; };
+		5BAC86B51D6D4F8A008C1828 /* 冷暖自知.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "冷暖自知.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		5BAC86B81D6D4F8A008C1828 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		5BAC86BA1D6D4F8A008C1828 /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
 		5BAC86BD1D6D4F8A008C1828 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		5BAC86BF1D6D4F8A008C1828 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		5BAC86C21D6D4F8A008C1828 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		5BAC86C41D6D4F8A008C1828 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		5BAC86CD1D6EF487008C1828 /* HamburgerButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HamburgerButton.swift; sourceTree = "<group>"; };
 		C66A02D78226D247457CCE67 /* Pods-Weather.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Weather.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Weather/Pods-Weather.debug.xcconfig"; sourceTree = "<group>"; };
 		F922E65023ABEBD6868DF6A8 /* Pods_Weather.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Weather.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -53,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				F922E65023ABEBD6868DF6A8 /* Pods_Weather.framework */,
+				5B2403061D794E41005FB9C0 /* NotificationCenter.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -70,7 +88,7 @@
 		5BAC86B61D6D4F8A008C1828 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				5BAC86B51D6D4F8A008C1828 /* Weather.app */,
+				5BAC86B51D6D4F8A008C1828 /* 冷暖自知.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -78,14 +96,30 @@
 		5BAC86B71D6D4F8A008C1828 /* Weather */ = {
 			isa = PBXGroup;
 			children = (
+				5BAC86CC1D6EF457008C1828 /* Common */,
 				5BAC86B81D6D4F8A008C1828 /* AppDelegate.swift */,
+				5B9E7E891D70333700197A71 /* WeatherAPI.swift */,
+				5B9E7E8B1D703FD200197A71 /* WeatherModel.swift */,
 				5BAC86BA1D6D4F8A008C1828 /* ViewController.swift */,
+				5BA6E45F1D78406C00BB60DA /* ChangeCityView.swift */,
+				5B94AC1A1D75572E00B034D2 /* HeaderView.xib */,
+				5B94AC1C1D75574E00B034D2 /* HeaderView.swift */,
 				5BAC86BC1D6D4F8A008C1828 /* Main.storyboard */,
+				5B94AC221D756DA800B034D2 /* WeatherTableViewCell.swift */,
 				5BAC86BF1D6D4F8A008C1828 /* Assets.xcassets */,
 				5BAC86C11D6D4F8A008C1828 /* LaunchScreen.storyboard */,
 				5BAC86C41D6D4F8A008C1828 /* Info.plist */,
 			);
 			path = Weather;
+			sourceTree = "<group>";
+		};
+		5BAC86CC1D6EF457008C1828 /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				5B9E7E961D73E7E400197A71 /* UIColor.swift */,
+				5BAC86CD1D6EF487008C1828 /* HamburgerButton.swift */,
+			);
+			path = Common;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -108,7 +142,7 @@
 			);
 			name = Weather;
 			productName = Weather;
-			productReference = 5BAC86B51D6D4F8A008C1828 /* Weather.app */;
+			productReference = 5BAC86B51D6D4F8A008C1828 /* 冷暖自知.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -123,6 +157,12 @@
 				TargetAttributes = {
 					5BAC86B41D6D4F8A008C1828 = {
 						CreatedOnToolsVersion = 7.3.1;
+						DevelopmentTeam = 2LMY96FMMA;
+						SystemCapabilities = {
+							com.apple.ApplicationGroups.iOS = {
+								enabled = 0;
+							};
+						};
 					};
 				};
 			};
@@ -152,6 +192,7 @@
 				5BAC86C31D6D4F8A008C1828 /* LaunchScreen.storyboard in Resources */,
 				5BAC86C01D6D4F8A008C1828 /* Assets.xcassets in Resources */,
 				5BAC86BE1D6D4F8A008C1828 /* Main.storyboard in Resources */,
+				5B94AC1B1D75572E00B034D2 /* HeaderView.xib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,8 +251,15 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5B94AC231D756DA800B034D2 /* WeatherTableViewCell.swift in Sources */,
 				5BAC86BB1D6D4F8A008C1828 /* ViewController.swift in Sources */,
+				5B9E7E8A1D70333700197A71 /* WeatherAPI.swift in Sources */,
+				5B94AC1D1D75574E00B034D2 /* HeaderView.swift in Sources */,
 				5BAC86B91D6D4F8A008C1828 /* AppDelegate.swift in Sources */,
+				5BAC86CE1D6EF487008C1828 /* HamburgerButton.swift in Sources */,
+				5BA6E4601D78406C00BB60DA /* ChangeCityView.swift in Sources */,
+				5B9E7E8C1D703FD200197A71 /* WeatherModel.swift in Sources */,
+				5B9E7E971D73E7E400197A71 /* UIColor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,10 +375,14 @@
 			baseConfigurationReference = C66A02D78226D247457CCE67 /* Pods-Weather.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = Weather/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.windward.Weather;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "冷暖自知";
+				PROVISIONING_PROFILE = "";
 			};
 			name = Debug;
 		};
@@ -339,10 +391,14 @@
 			baseConfigurationReference = 2F090946DA048E297B0C14AB /* Pods-Weather.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				INFOPLIST_FILE = Weather/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.windward.Weather;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "冷暖自知";
+				PROVISIONING_PROFILE = "";
 			};
 			name = Release;
 		};
