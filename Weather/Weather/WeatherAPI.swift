@@ -11,7 +11,7 @@ import Moya
 
 let MyWeatherKey: String = "b4f610fb3177461784c82122332f62ae"
 let WeatherProvider = RxMoyaProvider<WeatherAPI>()
-public var CityName = "大同"
+public var CityName = "成都"
 
 public enum WeatherAPI {
     case now

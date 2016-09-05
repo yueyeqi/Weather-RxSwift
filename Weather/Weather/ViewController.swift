@@ -24,11 +24,12 @@ class ViewController: UIViewController {
     @IBOutlet weak var bgImageView: UIImageView!
     
     var headerView: HeaderView = NSBundle.mainBundle().loadNibNamed("HeaderView", owner: nil, options: nil).first as! HeaderView
-    var weatherModel: WeatherModel! = nil
-    var hamburgerButton: HamburgerButton! = nil
-    var menuView: UIView! = nil
-    var itemInfo: [String] = []
-    var menuType: Int = 1 //1代表一级菜单，2代表设置菜单
+    
+    var weatherModel: WeatherModel! = nil            //天气模型
+    var hamburgerButton: HamburgerButton! = nil      //动效按钮
+    var menuView: UIView! = nil                      //菜单视图
+    var itemInfo: [String] = []                      //菜单数据源
+    var menuType: Int = 1                            //1代表一级菜单，2代表设置菜单
     
     //TableView数据源
     let dataSource = Variable([WeatherDetailModel]())
@@ -40,10 +41,16 @@ class ViewController: UIViewController {
         let homeDirectory = NSHomeDirectory()
         let imagePath = homeDirectory.stringByAppendingString("/Documents/bg.png")
         
+        //本地背景图片读取
         if let image = UIImage.init(contentsOfFile: imagePath) {
             bgImageView.image = image
         } else {
             bgImageView.image = UIImage(named: "5")
+        }
+        
+        //本地城市名称读取
+        if NSUserDefaults.standardUserDefaults().objectForKey("cityName") != nil {
+            CityName = NSUserDefaults.standardUserDefaults().objectForKey("cityName") as! String
         }
         
         tableView.dataSource = nil
@@ -102,7 +109,6 @@ class ViewController: UIViewController {
             
                     self.dataSource.value = self.weatherModel.daily
                     
-
                 case .Error(let error):
                     print(error)
                 default:
@@ -172,7 +178,6 @@ class ViewController: UIViewController {
         default:
             break
         }
-
     }
         
     //MARK: - 菜单动画
@@ -258,6 +263,7 @@ class ViewController: UIViewController {
             let cityName = ((alertController.textFields?.first)! as UITextField).text
             if cityName?.characters.count > 0 {
                 CityName = cityName!
+                NSUserDefaults.standardUserDefaults().setObject(CityName, forKey: "cityName")
                 self.requestData()
             }
         }))
@@ -266,8 +272,8 @@ class ViewController: UIViewController {
 
     //MARK: - 关于
     func about() {
-        let alertController = UIAlertController(title: "关于", message: "送给那个心爱的女人\nYZH\nO(∩_∩)O~", preferredStyle: .Alert)
-        alertController.addAction(UIAlertAction(title: "爱你", style: .Default, handler: nil))
+        let alertController = UIAlertController(title: "关于", message: "这是一个天气APP", preferredStyle: .Alert)
+        alertController.addAction(UIAlertAction(title: "确认", style: .Default, handler: nil))
         self.presentViewController(alertController, animated: true, completion: nil)
     }
 }
