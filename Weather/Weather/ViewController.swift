@@ -11,35 +11,33 @@ import RxSwift
 import RxCocoa
 import RxDataSources
 import pop
-import Moya_SwiftyJSONMapper
 import MBProgressHUD
 import TZImagePickerController
 
-public let ScreenW = UIScreen.mainScreen().bounds.size.width
-public let ScreenH = UIScreen.mainScreen().bounds.size.height
+public let ScreenW = UIScreen.main.bounds.size.width
+public let ScreenH = UIScreen.main.bounds.size.height
 
 class ViewController: UIViewController {
         
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var bgImageView: UIImageView!
     
-    var headerView: HeaderView = NSBundle.mainBundle().loadNibNamed("HeaderView", owner: nil, options: nil).first as! HeaderView
+    var headerView: HeaderView = Bundle.main.loadNibNamed("HeaderView", owner: nil, options: nil)?.first as! HeaderView
     
-    var weatherModel: WeatherModel! = nil            //天气模型
+//    var weatherModel: WeatherModel! = nil            //天气模型
     var hamburgerButton: HamburgerButton! = nil      //动效按钮
     var menuView: UIView! = nil                      //菜单视图
     var itemInfo: [String] = []                      //菜单数据源
     var menuType: Int = 1                            //1代表一级菜单，2代表设置菜单
     
     //TableView数据源
-    let dataSource = Variable([WeatherDetailModel]())
+    let dataSource = PublishSubject<[DailyForecast]>()
     let disposeBag = DisposeBag()
     
     override func viewDidLoad() {
         super.viewDidLoad()
     
-        let homeDirectory = NSHomeDirectory()
-        let imagePath = homeDirectory.stringByAppendingString("/Documents/bg.png")
+        let imagePath = NSHomeDirectory().appending("/Documents/bg.png")
         
         //本地背景图片读取
         if let image = UIImage.init(contentsOfFile: imagePath) {
@@ -49,8 +47,8 @@ class ViewController: UIViewController {
         }
         
         //本地城市名称读取
-        if NSUserDefaults.standardUserDefaults().objectForKey("cityName") != nil {
-            CityName = NSUserDefaults.standardUserDefaults().objectForKey("cityName") as! String
+        if UserDefaults.standard.object(forKey: "cityName") != nil {
+            CityName = UserDefaults.standard.object(forKey: "cityName") as! String
         }
         
         tableView.dataSource = nil
@@ -58,12 +56,16 @@ class ViewController: UIViewController {
         configTableView()
         
         // 菜单按钮
-        hamburgerButton = HamburgerButton(frame: CGRectMake(ScreenW - 60, 20, 45, 45))
-        hamburgerButton.rx_tap
-            .subscribeNext { () in
-                self.toggle()
-        }.addDisposableTo(disposeBag)
+        hamburgerButton = HamburgerButton(frame: CGRect(x: ScreenW - 60, y: 40, width: 45, height: 45))
+        hamburgerButton.rx.tap.bind { [weak self] in
+            self?.toggle()
+        }.disposed(by: disposeBag)
         view.addSubview(hamburgerButton)
+        
+        // 刷新按钮
+        headerView.refreshButton.rx.tap.bind { [weak self] in
+            self?.requestData()
+        }.disposed(by: disposeBag)
         
         //请求数据
         requestData()
@@ -76,65 +78,48 @@ class ViewController: UIViewController {
     
     //MARK: - 配置HeaderView
     func configHeaderView() {
-        headerView.frame = CGRectMake(0, 0, ScreenW, ScreenH - 20)
-        tableView.pagingEnabled = true
+        headerView.frame = CGRect(x: 0, y: 0, width: ScreenW, height: ScreenH - 20)
+        tableView.isPagingEnabled = true
         tableView.showsVerticalScrollIndicator = false
         tableView.tableHeaderView = headerView
     }
     
     func requestData() {
-        MBProgressHUD.showHUDAddedTo(self.view, animated: true)
-        let _ = WeatherProvider
-            .request(.now)
-            .mapObject(WeatherModel)
-            .subscribe { (event) in
-                MBProgressHUD.hideHUDForView(self.view, animated: true)
-                switch event {
-                case .Next(let model):
-                    
-                    //Config HeaderView
-                    self.headerView.cityLabel.text = model.city
-                    self.headerView.updateTimeLabel.text = "更新时间:\(self.dateSub(model.update))"
-                    self.headerView.tmpLabel.text = "\(model.tmp)°"
-                    self.headerView.maxminLabel.text = "\(model.min)°/\(model.max)°"
-                    self.headerView.tmpImageView.image = UIImage(named: "\(model.code)")
-                    self.headerView.txtLabel.text = model.txt
-                    self.weatherModel = model
-                    
-                    // 刷新按钮
-                    self.headerView.refreshButton.rx_tap
-                        .subscribeNext { () in
-                            self.requestData()
-                        }.addDisposableTo(self.disposeBag)
-            
-                    self.dataSource.value = self.weatherModel.daily
-                    
-                case .Error(let error):
-                    print(error)
-                default:
-                    break
+        MBProgressHUD.showAdded(to: self.view, animated: true)
+        WeatherProvider.rx.request(.now).mapJSON().asObservable()
+            .bind { [weak self] (model) in
+                guard let self = self else { return }
+                MBProgressHUD.hide(for: self.view, animated: true)
+                guard let respDic = model as? [String: Any] else { return }
+                guard let model = WeatherModel(JSON: respDic) else { return }
+                print(model)
+                guard let array = model.heWeather6 else { return }
+                let item = array[0]
+                //取出第一天的数据
+                if (item.dailyForecast ?? []).count > 0 {
+                    self.dataSource.onNext(item.dailyForecast ?? [])
+                    let first = (item.dailyForecast ?? [])[0]
+                    self.headerView.tmpLabel.text = "\(first.hum ?? "NA")°"
+                    self.headerView.maxminLabel.text = "\(first.tmpMin ?? "NA")°/\(first.tmpMax ?? "NA")°"
+                    self.headerView.tmpImageView.image = UIImage(named: "\(first.condCodeD ?? "100")")
+                    self.headerView.txtLabel.text = first.condTxtD
                 }
-            }.addDisposableTo(disposeBag)
-    }
-
-    //MARK: - 时间截取
-    func dateSub(date: String) -> String {
-        return (date as NSString).substringWithRange(NSMakeRange(5, 11))
+                self.headerView.cityLabel.text = item.basic?.location
+                self.headerView.updateTimeLabel.text = "更新时间:\(item.update?.loc ?? "NA")"
+        }.disposed(by: disposeBag)
     }
     
     //MARK: - 配置TableView
     func configTableView() {
-        dataSource.asObservable()
-            .bindTo(tableView.rx_itemsWithCellIdentifier("WeatherCell", cellType: WeatherTableViewCell.self)) {
-                (_, weatherDetail, cell) in
-                
-                //Config Cell
-                cell.dateLabel.text = weatherDetail.date
-                cell.maxminLabel.text = "\(weatherDetail.min)°/\(weatherDetail.max)°"
-                cell.txtLabel.text = weatherDetail.txt
-                cell.weatherImageView.image = UIImage(named: weatherDetail.code)
-                
-        }.addDisposableTo(disposeBag)
+        dataSource.asObservable().bind(to: tableView.rx.items(cellIdentifier: "WeatherCell", cellType: WeatherTableViewCell.self)) {_, weatherDetail, cell in
+            //Config Cell
+            cell.dateLabel.text = weatherDetail.date
+            cell.maxminLabel.text = "\(weatherDetail.tmpMin ?? "NA")°/\(weatherDetail.tmpMax ?? "NA")°"
+            cell.txtLabel.text = weatherDetail.condTxtD
+            if let condCodeD = weatherDetail.condCodeD {
+                cell.weatherImageView.image = UIImage(named: condCodeD)
+            }
+        }.disposed(by: disposeBag)
     }
     
     //MARK: - 菜单按钮点击事件
@@ -194,34 +179,34 @@ class ViewController: UIViewController {
             break
         }
         
-        menuView = UIView(frame: CGRectMake(ScreenW, 80, 100, 50 * CGFloat(itemInfo.count)))
-        menuView.userInteractionEnabled = true
+        menuView = UIView(frame: CGRect(x: ScreenW, y: 80, width: 100, height: 50 * CGFloat(itemInfo.count)))
+        menuView.isUserInteractionEnabled = true
         view.addSubview(menuView)
         
         menuView.pop_removeAllAnimations()
         
         let animation = POPSpringAnimation(propertyNamed: kPOPLayerPositionX)
-        animation.toValue = NSValue(CGPoint: CGPointMake(ScreenW - 50, 80))
-        animation.springBounciness = 10
-        animation.springSpeed = 12
-        menuView.layer.pop_addAnimation(animation, forKey: "Position")
-        
-        for (index, name) in itemInfo.enumerate() {
-            let btn = UIButton(type: .Custom)
+        animation!.toValue = NSValue(cgPoint: CGPoint(x: ScreenW - 50, y: 80))
+        animation!.springBounciness = 10
+        animation!.springSpeed = 12
+        menuView.layer.pop_add(animation, forKey: "Position")
+    
+        for (index, name) in itemInfo.enumerated() {
+            let btn = UIButton(type: .custom)
             btn.tag = 1000 * index
-            btn.frame = CGRectMake(menuView.frame.width, 50 * CGFloat(index), menuView.frame.width, 50)
-            btn.setTitle(name, forState: .Normal)
-            btn.rx_tap.subscribeNext({ () in
-                self.didBtnAction(index)
-            }).addDisposableTo(disposeBag)
+            btn.frame = CGRect(x: menuView.frame.width, y: 50 * CGFloat(index), width: menuView.frame.width, height: 50)
+            btn.setTitle(name, for: .normal)
+            btn.rx.tap.bind { [weak self] in
+                self?.didBtnAction(index: index)
+            }.disposed(by: disposeBag)
             menuView.addSubview(btn)
             
             let btnAnimation = POPSpringAnimation(propertyNamed: kPOPLayerPositionX)
-            btnAnimation.toValue = NSValue(CGPoint: CGPointMake(menuView.frame.width - 50, 50 * CGFloat(index)))
-            btnAnimation.springBounciness = 10
-            btnAnimation.springSpeed = 12
-            btnAnimation.beginTime = CACurrentMediaTime() + Double(index) * 0.2
-            btn.pop_addAnimation(btnAnimation, forKey: "BtnPosition\(index)")
+            btnAnimation!.toValue = NSValue(cgPoint: CGPoint(x: menuView.frame.width - 50, y: 50 * CGFloat(index)))
+            btnAnimation!.springBounciness = 10
+            btnAnimation!.springSpeed = 12
+            btnAnimation!.beginTime = CACurrentMediaTime() + Double(index) * 0.2
+            btn.pop_add(btnAnimation, forKey: "BtnPosition\(index)")
             
         }
     }
@@ -230,51 +215,50 @@ class ViewController: UIViewController {
     func disMenu() {
         menuView.pop_removeAllAnimations()
         let disAnimation = POPSpringAnimation(propertyNamed: kPOPLayerPositionX)
-        disAnimation.toValue = NSValue(CGPoint: CGPointMake(ScreenW + 50, 0))
-        disAnimation.springBounciness = 10
-        disAnimation.springSpeed = 12
-        menuView.layer.pop_addAnimation(disAnimation, forKey: "DisPosition")
+        disAnimation!.toValue = NSValue(cgPoint: CGPoint(x: ScreenW + 50, y: 0))
+        disAnimation!.springBounciness = 10
+        disAnimation!.springSpeed = 12
+        menuView.layer.pop_add(disAnimation, forKey: "DisPosition")
         menuView = nil
     }
     
     //MARK: - 调用相册
     func photoLib() {
         let imagePickerViewController = TZImagePickerController(maxImagesCount: 1, delegate: self)
-        imagePickerViewController.didFinishPickingPhotosHandle = {(imageArray, objects, isOriginalPhoto) -> Void in
-            let bgImage = imageArray.first
-            let homeDirectory = NSHomeDirectory()
-            let imagePath = homeDirectory.stringByAppendingString("/Documents/bg.png")
-            UIImagePNGRepresentation(bgImage!)?.writeToFile(imagePath, atomically: true)
+        imagePickerViewController!.didFinishPickingPhotosHandle = {(imageArray, objects, isOriginalPhoto) -> Void in
+            let bgImage = imageArray?.first
+            let imagePath = NSHomeDirectory().appending("/Documents/bg.png")
+            try? bgImage?.pngData()?.write(to: URL(string: imagePath)!, options: .atomic)
             self.bgImageView.image = bgImage
         }
         
-        self.presentViewController(imagePickerViewController, animated: true, completion: nil)
+        self.present(imagePickerViewController!, animated: true, completion: nil)
 
     }
     
     //MARK: - 更换城市
     func changeCity() {
-        let alertController = UIAlertController(title: "更换城市", message: "输入更换城市名称", preferredStyle: .Alert)
-        alertController.addTextFieldWithConfigurationHandler { (textField) in
+        let alertController = UIAlertController(title: "更换城市", message: "输入更换城市名称", preferredStyle: .alert)
+        alertController.addTextField { (textField) in
             textField.placeholder = "城市名称"
         }
-        alertController.addAction(UIAlertAction(title: "取消", style: .Cancel, handler: nil))
-        alertController.addAction(UIAlertAction(title: "确认", style: .Default, handler: { (alert) in
+        alertController.addAction(UIAlertAction(title: "取消", style: .cancel, handler: nil))
+        alertController.addAction(UIAlertAction(title: "确认", style: .default, handler: { (alert) in
             let cityName = ((alertController.textFields?.first)! as UITextField).text
-            if cityName?.characters.count > 0 {
+            if (cityName?.count ?? 0) > 0 {
                 CityName = cityName!
-                NSUserDefaults.standardUserDefaults().setObject(CityName, forKey: "cityName")
+                UserDefaults.standard.set(CityName, forKey: "cityName")
                 self.requestData()
             }
         }))
-        self.presentViewController(alertController, animated: true, completion: nil)
+        self.present(alertController, animated: true, completion: nil)
     }
 
     //MARK: - 关于
     func about() {
-        let alertController = UIAlertController(title: "关于", message: "这是一个天气APP", preferredStyle: .Alert)
-        alertController.addAction(UIAlertAction(title: "确认", style: .Default, handler: nil))
-        self.presentViewController(alertController, animated: true, completion: nil)
+        let alertController = UIAlertController(title: "关于", message: "这是一个天气APP", preferredStyle: .alert)
+        alertController.addAction(UIAlertAction(title: "确认", style: .default, handler: nil))
+        self.present(alertController, animated: true, completion: nil)
     }
 }
 

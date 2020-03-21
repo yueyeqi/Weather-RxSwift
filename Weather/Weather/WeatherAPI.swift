@@ -9,9 +9,9 @@
 import Foundation
 import Moya
 
-let MyWeatherKey: String = "b4f610fb3177461784c82122332f62ae"
-let WeatherProvider = RxMoyaProvider<WeatherAPI>()
-public var CityName = "成都"
+let MyWeatherKey: String = "e77317f54f364ef68fb874fd267635ff"
+let WeatherProvider = MoyaProvider<WeatherAPI>()
+public var CityName = "chengdu"
 
 public enum WeatherAPI {
     case now
@@ -19,13 +19,13 @@ public enum WeatherAPI {
 
 extension WeatherAPI: TargetType {
     
-    public var baseURL: NSURL {
-        let str: String = "https://api.heweather.com/x3/weather?"
-        let queryItem1 = NSURLQueryItem(name: "city", value: CityName)
+    public var baseURL: URL {
+        let str: String = "https://free-api.heweather.net/s6/weather/forecast?"
+        let queryItem1 = NSURLQueryItem(name: "location", value: CityName)
         let queryItem2 = NSURLQueryItem(name: "key", value: MyWeatherKey)
         let urlCom = NSURLComponents(string: str)
-        urlCom?.queryItems = [queryItem1, queryItem2]
-        return (urlCom?.URL!)!
+        urlCom?.queryItems = [(queryItem1 as URLQueryItem), (queryItem2 as URLQueryItem)]
+        return (urlCom?.url!)!
     }
     
     public var path: String {
@@ -33,18 +33,21 @@ extension WeatherAPI: TargetType {
     }
     
     public var method: Moya.Method {
-        return .GET
+        .get
     }
     
-    public var parameters: [String : AnyObject]? {
-        return nil
+    public var sampleData: Data {
+        return "".data(using: String.Encoding.utf8)!
     }
     
-    public var sampleData: NSData {
-        return "123".dataUsingEncoding(NSUTF8StringEncoding)!
+    public var task: Task {
+        switch self {
+        case .now:
+            return .requestParameters(parameters: [:], encoding: URLEncoding.default)
+        }
     }
     
-    public var multipartBody: [MultipartFormData]? {
+    public var headers: [String : String]? {
         return nil
     }
 }

@@ -1,97 +1,100 @@
 //  Copyright (c) 2015 Rob Rix. All rights reserved.
 
 /// An enum representing either a failure with an explanatory error, or a success with a result value.
-public enum Result<T, Error: ResultErrorType>: ResultType, CustomStringConvertible, CustomDebugStringConvertible {
-	case Success(T)
-	case Failure(Error)
+public enum Result<Value, Error: Swift.Error>: ResultProtocol, CustomStringConvertible, CustomDebugStringConvertible {
+	case success(Value)
+	case failure(Error)
+
+	/// The compatibility alias for the Swift 5's `Result` in the standard library.
+	///
+	/// See https://github.com/apple/swift-evolution/blob/master/proposals/0235-add-result.md
+	/// and https://forums.swift.org/t/accepted-with-modifications-se-0235-add-result-to-the-standard-library/18603
+	/// for the details.
+	public typealias Success = Value
+	/// The compatibility alias for the Swift 5's `Result` in the standard library.
+	///
+	/// See https://github.com/apple/swift-evolution/blob/master/proposals/0235-add-result.md
+	/// and https://forums.swift.org/t/accepted-with-modifications-se-0235-add-result-to-the-standard-library/18603
+	/// for the details.
+	public typealias Failure = Error
 
 	// MARK: Constructors
 
 	/// Constructs a success wrapping a `value`.
-	public init(value: T) {
-		self = .Success(value)
+	public init(value: Value) {
+		self = .success(value)
 	}
 
 	/// Constructs a failure wrapping an `error`.
 	public init(error: Error) {
-		self = .Failure(error)
+		self = .failure(error)
 	}
 
-	/// Constructs a result from an Optional, failing with `Error` if `nil`.
-#if swift(>=3)
-	public init(_ value: T?, failWith: @autoclosure () -> Error) {
-		self = value.map(Result.Success) ?? .Failure(failWith())
+	/// Constructs a result from an `Optional`, failing with `Error` if `nil`.
+	public init(_ value: Value?, failWith: @autoclosure () -> Error) {
+		self = value.map(Result.success) ?? .failure(failWith())
 	}
-#else
-	public init(_ value: T?, @autoclosure failWith: () -> Error) {
-		self = value.map(Result.Success) ?? .Failure(failWith())
-	}
-#endif
 
 	/// Constructs a result from a function that uses `throw`, failing with `Error` if throws.
-#if swift(>=3)
-	public init(_ f: @autoclosure () throws -> T) {
-		self.init(attempt: f)
+	public init(_ f: @autoclosure () throws -> Value) {
+		self.init(catching: f)
 	}
-#else
-	public init(@autoclosure _ f: () throws -> T) {
-		self.init(attempt: f)
-	}
-#endif
 
 	/// Constructs a result from a function that uses `throw`, failing with `Error` if throws.
-#if swift(>=3)
-	public init(attempt f: @noescape () throws -> T) {
+	@available(*, deprecated, renamed: "init(catching:)")
+	public init(attempt f: () throws -> Value) {
+		self.init(catching: f)
+	}
+
+	/// The same as `init(attempt:)` aiming for the compatibility with the Swift 5's `Result` in the standard library.
+	///
+	/// See https://github.com/apple/swift-evolution/blob/master/proposals/0235-add-result.md
+	/// and https://forums.swift.org/t/accepted-with-modifications-se-0235-add-result-to-the-standard-library/18603
+	/// for the details.
+	public init(catching body: () throws -> Success) {
 		do {
-			self = .Success(try f())
-		} catch {
-			self = .Failure(error as! Error)
+			self = .success(try body())
+		} catch var error {
+			if Error.self == AnyError.self {
+				error = AnyError(error)
+			}
+			self = .failure(error as! Error)
 		}
 	}
-#else
-	public init(@noescape attempt f: () throws -> T) {
-		do {
-			self = .Success(try f())
-		} catch {
-			self = .Failure(error as! Error)
-		}
-	}
-#endif
 
 	// MARK: Deconstruction
 
-	/// Returns the value from `Success` Results or `throw`s the error.
-	public func dematerialize() throws -> T {
+	/// Returns the value from `success` Results or `throw`s the error.
+	@available(*, deprecated, renamed: "get()")
+	public func dematerialize() throws -> Value {
+		return try get()
+	}
+
+	/// The same as `dematerialize()` aiming for the compatibility with the Swift 5's `Result` in the standard library.
+	///
+	/// See https://github.com/apple/swift-evolution/blob/master/proposals/0235-add-result.md
+	/// and https://forums.swift.org/t/accepted-with-modifications-se-0235-add-result-to-the-standard-library/18603
+	/// for the details.
+	public func get() throws -> Success {
 		switch self {
-		case let .Success(value):
+		case let .success(value):
 			return value
-		case let .Failure(error):
+		case let .failure(error):
 			throw error
 		}
 	}
 
 	/// Case analysis for Result.
 	///
-	/// Returns the value produced by applying `ifFailure` to `Failure` Results, or `ifSuccess` to `Success` Results.
-#if swift(>=3)
-	public func analysis<Result>(ifSuccess: @noescape (T) -> Result, ifFailure: @noescape (Error) -> Result) -> Result {
+	/// Returns the value produced by applying `ifFailure` to `failure` Results, or `ifSuccess` to `success` Results.
+	public func analysis<Result>(ifSuccess: (Value) -> Result, ifFailure: (Error) -> Result) -> Result {
 		switch self {
-		case let .Success(value):
+		case let .success(value):
 			return ifSuccess(value)
-		case let .Failure(value):
+		case let .failure(value):
 			return ifFailure(value)
 		}
 	}
-#else
-	public func analysis<Result>(@noescape ifSuccess ifSuccess: T -> Result, @noescape ifFailure: Error -> Result) -> Result {
-		switch self {
-		case let .Success(value):
-			return ifSuccess(value)
-		case let .Failure(value):
-			return ifFailure(value)
-		}
-	}
-#endif
 
 	// MARK: Errors
 
@@ -107,30 +110,9 @@ public enum Result<T, Error: ResultErrorType>: ResultType, CustomStringConvertib
 	/// The userInfo key for source file line numbers in errors constructed by Result.
 	public static var lineKey: String { return "\(errorDomain).line" }
 
-	#if os(Linux)
-	private typealias UserInfoType = Any
-	#else
-	private typealias UserInfoType = AnyObject
-	#endif
-
 	/// Constructs an error.
-#if swift(>=3)
 	public static func error(_ message: String? = nil, function: String = #function, file: String = #file, line: Int = #line) -> NSError {
-		var userInfo: [String: UserInfoType] = [
-		                                       	functionKey: function,
-		                                       	fileKey: file,
-		                                       	lineKey: line,
-		                                       	]
-		
-		if let message = message {
-			userInfo[NSLocalizedDescriptionKey] = message
-		}
-		
-		return NSError(domain: errorDomain, code: 0, userInfo: userInfo)
-	}
-#else
-	public static func error(message: String? = nil, function: String = #function, file: String = #file, line: Int = #line) -> NSError {
-		var userInfo: [String: UserInfoType] = [
+		var userInfo: [String: Any] = [
 			functionKey: function,
 			fileKey: file,
 			lineKey: line,
@@ -142,15 +124,15 @@ public enum Result<T, Error: ResultErrorType>: ResultType, CustomStringConvertib
 
 		return NSError(domain: errorDomain, code: 0, userInfo: userInfo)
 	}
-#endif
 
 
 	// MARK: CustomStringConvertible
 
 	public var description: String {
-		return analysis(
-			ifSuccess: { ".Success(\($0))" },
-			ifFailure: { ".Failure(\($0))" })
+		switch self {
+		case let .success(value): return ".success(\(value))"
+		case let .failure(error): return ".failure(\(error))"
+		}
 	}
 
 
@@ -159,109 +141,89 @@ public enum Result<T, Error: ResultErrorType>: ResultType, CustomStringConvertib
 	public var debugDescription: String {
 		return description
 	}
+
+	// MARK: ResultProtocol
+	public var result: Result<Value, Error> {
+		return self
+	}
+}
+
+extension Result where Result.Failure == AnyError {
+	/// Constructs a result from an expression that uses `throw`, failing with `AnyError` if throws.
+	public init(_ f: @autoclosure () throws -> Value) {
+		self.init(attempt: f)
+	}
+
+	/// Constructs a result from a closure that uses `throw`, failing with `AnyError` if throws.
+	public init(attempt f: () throws -> Value) {
+		do {
+			self = .success(try f())
+		} catch {
+			self = .failure(AnyError(error))
+		}
+	}
 }
 
 // MARK: - Derive result from failable closure
 
-#if swift(>=3)
-public func materialize<T>(_ f: @noescape () throws -> T) -> Result<T, NSError> {
-	return materialize(try f())
+@available(*, deprecated, renamed: "Result.init(attempt:)")
+public func materialize<T>(_ f: () throws -> T) -> Result<T, AnyError> {
+	return Result(attempt: f)
 }
 
-public func materialize<T>(_ f: @autoclosure () throws -> T) -> Result<T, NSError> {
-	do {
-		return .Success(try f())
-	} catch let error as NSError {
-		return .Failure(error)
-	}
+@available(*, deprecated, renamed: "Result.init(_:)")
+public func materialize<T>(_ f: @autoclosure () throws -> T) -> Result<T, AnyError> {
+	return Result(try f())
 }
-#else
-public func materialize<T>(@noescape f: () throws -> T) -> Result<T, NSError> {
-	return materialize(try f())
-}
+
+// MARK: - ErrorConvertible conformance
 	
-public func materialize<T>(@autoclosure f: () throws -> T) -> Result<T, NSError> {
-	do {
-		return .Success(try f())
-	} catch let error as NSError {
-		return .Failure(error)
+extension NSError: ErrorConvertible {
+	public static func error(from error: Swift.Error) -> Self {
+		func cast<T: NSError>(_ error: Swift.Error) -> T {
+			return error as! T
+		}
+
+		return cast(error)
 	}
 }
-#endif
 
-// MARK: - Cocoa API conveniences
+// MARK: - migration support
 
-#if !os(Linux)
+@available(*, unavailable, message: "Use the overload which returns `Result<T, AnyError>` instead")
+public func materialize<T>(_ f: () throws -> T) -> Result<T, NSError> {
+	fatalError()
+}
 
-/// Constructs a Result with the result of calling `try` with an error pointer.
+@available(*, unavailable, message: "Use the overload which returns `Result<T, AnyError>` instead")
+public func materialize<T>(_ f: @autoclosure () throws -> T) -> Result<T, NSError> {
+	fatalError()
+}
+
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
+
+/// Constructs a `Result` with the result of calling `try` with an error pointer.
 ///
 /// This is convenient for wrapping Cocoa API which returns an object or `nil` + an error, by reference. e.g.:
 ///
-///     Result.try { NSData(contentsOfURL: URL, options: .DataReadingMapped, error: $0) }
-#if swift(>=3)
+///     Result.try { NSData(contentsOfURL: URL, options: .dataReadingMapped, error: $0) }
+@available(*, unavailable, message: "This has been removed. Use `Result.init(attempt:)` instead. See https://github.com/antitypical/Result/issues/85 for the details.")
 public func `try`<T>(_ function: String = #function, file: String = #file, line: Int = #line, `try`: (NSErrorPointer) -> T?) -> Result<T, NSError> {
-	var error: NSError?
-	return `try`(&error).map(Result.Success) ?? .Failure(error ?? Result<T, NSError>.error(function: function, file: file, line: line))
+	fatalError()
 }
-#else
-public func `try`<T>(function: String = #function, file: String = #file, line: Int = #line, `try`: NSErrorPointer -> T?) -> Result<T, NSError> {
-	var error: NSError?
-	return `try`(&error).map(Result.Success) ?? .Failure(error ?? Result<T, NSError>.error(function: function, file: file, line: line))
-}
-#endif
 
-/// Constructs a Result with the result of calling `try` with an error pointer.
+/// Constructs a `Result` with the result of calling `try` with an error pointer.
 ///
 /// This is convenient for wrapping Cocoa API which returns a `Bool` + an error, by reference. e.g.:
 ///
 ///     Result.try { NSFileManager.defaultManager().removeItemAtURL(URL, error: $0) }
-#if swift(>=3)
+@available(*, unavailable, message: "This has been removed. Use `Result.init(attempt:)` instead. See https://github.com/antitypical/Result/issues/85 for the details.")
 public func `try`(_ function: String = #function, file: String = #file, line: Int = #line, `try`: (NSErrorPointer) -> Bool) -> Result<(), NSError> {
-	var error: NSError?
-	return `try`(&error) ?
-		.Success(())
-		:	.Failure(error ?? Result<(), NSError>.error(function: function, file: file, line: line))
+	fatalError()
 }
-#else
-public func `try`(function: String = #function, file: String = #file, line: Int = #line, `try`: NSErrorPointer -> Bool) -> Result<(), NSError> {
-	var error: NSError?
-	return `try`(&error) ?
-		.Success(())
-	:	.Failure(error ?? Result<(), NSError>.error(function: function, file: file, line: line))
-}
-#endif
 
 #endif
-
-// MARK: - ErrorTypeConvertible conformance
-	
-extension NSError: ErrorTypeConvertible {
-#if swift(>=3)
-	public static func errorFromErrorType(_ error: ResultErrorType) -> Self {
-		func cast<T: NSError>(_ error: ResultErrorType) -> T {
-			return error as! T
-		}
-
-		return cast(error)
-	}
-#else
-	public static func errorFromErrorType(error: ResultErrorType) -> Self {
-		func cast<T: NSError>(error: ResultErrorType) -> T {
-			return error as! T
-		}
-
-		return cast(error)
-	}
-#endif
-}
 
 // MARK: -
-
-/// An “error” that is impossible to construct.
-///
-/// This can be used to describe `Result`s where failures will never
-/// be generated. For example, `Result<Int, NoError>` describes a result that
-/// contains an `Int`eger and is guaranteed never to be a `Failure`.
-public enum NoError: ResultErrorType { }
 
 import Foundation

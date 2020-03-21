@@ -1,10 +1,20 @@
-[![CircleCI](https://circleci.com/gh/Moya/Moya.svg?style=svg)](https://circleci.com/gh/Moya/Moya) [![codecov.io](https://codecov.io/github/Moya/Moya/coverage.svg?branch=master)](https://codecov.io/github/Moya/Moya?branch=master)
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+<p align="center">
+  <img height="160" src="web/logo_github.png" />
+</p>
 
-![Moya Logo](web/moya_logo_github.png)
+# Moya
+
+[![CircleCI](https://img.shields.io/circleci/project/github/Moya/Moya/master.svg)](https://circleci.com/gh/Moya/Moya/tree/master)
+[![codecov.io](https://codecov.io/github/Moya/Moya/coverage.svg?branch=master)](https://codecov.io/github/Moya/Moya?branch=master)
+[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg?style=flat)](https://github.com/Carthage/Carthage)
+[![Accio supported](https://img.shields.io/badge/Accio-supported-0A7CF5.svg?style=flat)](https://github.com/JamitLabs/Accio)
+[![CocoaPods compatible](https://img.shields.io/cocoapods/v/Moya.svg)](https://cocoapods.org/pods/Moya)
+[![Swift Package Manager compatible](https://img.shields.io/badge/Swift%20Package%20Manager-compatible-brightgreen.svg)](https://github.com/apple/swift-package-manager)
+
+*A Chinese version of this document can be found [here](https://github.com/Moya/Moya/blob/master/Readme_CN.md).*
 
 You're a smart developer. You probably use [Alamofire](https://github.com/Alamofire/Alamofire) to abstract away access to
-NSURLSession and all those nasty details you don't really care about. But then,
+`URLSession` and all those nasty details you don't really care about. But then,
 like lots of smart developers, you write ad hoc network abstraction layers. They
 are probably called "APIManager" or "NetworkModel", and they always end in tears.
 
@@ -21,7 +31,7 @@ sufficiently encapsulates actually calling Alamofire directly. It should be simp
 enough that common things are easy, but comprehensive enough that complicated things
 are also easy.
 
-> If you use Alamofire to abstract away `NSURLSession`, why not use something
+> If you use Alamofire to abstract away `URLSession`, why not use something
 to abstract away the nitty gritty of URLs, parameters, etc?
 
 Some awesome features of Moya:
@@ -30,68 +40,171 @@ Some awesome features of Moya:
 - Lets you define a clear usage of different endpoints with associated enum values.
 - Treats test stubs as first-class citizens so unit testing is super-easy.
 
-Sample Project
---------------
+You can check out more about the project direction in the [vision document](https://github.com/Moya/Moya/blob/master/Vision.md).
 
-There's a sample project in the Demo directory. Have fun!
+## Sample Projects
 
-Project Status
---------------
+We have provided two sample projects in the repository. To use it download the repo, run `carthage update` to download the required libraries and  open [Moya.xcodeproj](https://github.com/Moya/Moya/tree/master/Moya.xcodeproj). You'll see two schemes: `Basic` and `Multi-Target` - select one and then build & run! Source files for these are in the `Examples` directory in project navigator. Have fun!
+
+## Project Status
 
 This project is actively under development, and is being used in [Artsy's
 new auction app](https://github.com/Artsy/eidolon). We consider it
 ready for production use.
 
-Currently, we support Xcode 7 and Swift 2.
+## Installation
 
-Installation
-------------
+### Moya version vs Swift version.
+
+Below is a table that shows which version of Moya you should use for
+your Swift version.
+
+| Swift | Moya           | RxMoya          | ReactiveMoya   |
+| ----- | -------------- |---------------- |--------------- |
+| 5.X   | >= 13.0.0      | >= 13.0.0       | >= 13.0.0      |
+| 4.X   | 9.0.0 - 12.0.1 | 10.0.0 - 12.0.1 | 9.0.0 - 12.0.1 |
+| 3.X   | 8.0.0 - 8.0.5  | 8.0.0 - 8.0.5   | 8.0.0 - 8.0.5  |
+| 2.3   | 7.0.2 - 7.0.4  | 7.0.2 - 7.0.4   | 7.0.2 - 7.0.4  |
+| 2.2   | <= 7.0.1       | <= 7.0.1        | <= 7.0.1       |
+
+_Note: If you are using Swift 4.2 in your project, but you are using Xcode 10.2, Moya 13 should work correctly even though we use Swift 5.0._
+
+**Upgrading to a new major version of Moya? Check out our [migration guides](https://github.com/Moya/Moya/blob/master/docs/MigrationGuides).**
+
+### Swift Package Manager
+
+To integrate using Apple's Swift package manager, add the following as a dependency to your `Package.swift`:
+
+```swift
+.package(url: "https://github.com/Moya/Moya.git", .upToNextMajor(from: "13.0.0"))
+```
+
+and then specify `"Moya"` as a dependency of the Target in which you wish to use Moya.
+If you want to use reactive extensions, add also `"ReactiveMoya"` or `"RxMoya"` as your Target dependency respectively.
+Here's an example `PackageDescription`:
+
+```swift
+// swift-tools-version:5.0
+import PackageDescription
+
+let package = Package(
+    name: "MyPackage",
+    products: [
+        .library(
+            name: "MyPackage",
+            targets: ["MyPackage"]),
+    ],
+    dependencies: [
+        .package(url: "https://github.com/Moya/Moya.git", .upToNextMajor(from: "13.0.0"))
+    ],
+    targets: [
+        .target(
+            name: "MyPackage",
+            dependencies: ["ReactiveMoya"])
+    ]
+)
+```
+
+Note that as of Moya 10, SPM only works with Swift 4 toolchain and greater.
+
+### Accio
+
+[Accio](https://github.com/JamitLabs/Accio) is a dependency manager based on SwiftPM which can build frameworks for iOS/macOS/tvOS/watchOS. Therefore the integration steps of Moya are exactly the same as described above. Once your `Package.swift` file is configured, run `accio update` instead of `swift package update`.
 
 ### CocoaPods
-Just add `pod 'Moya'` to your Podfile and go!
 
-In any file you'd like to use Moya in, don't forget to
-import the framework with `import Moya`.
-
-For RxSwift or ReactiveCocoa extensions, this project will include
-them as dependencies. You can do this via CocoaPods subspecs.
+For Moya, use the following entry in your Podfile:
 
 ```rb
-pod 'Moya/RxSwift'
-pod 'Moya/ReactiveCocoa'
+pod 'Moya', '~> 13.0'
+
+# or 
+
+pod 'Moya/RxSwift', '~> 13.0'
+
+# or
+
+pod 'Moya/ReactiveSwift', '~> 13.0'
 ```
 
 Then run `pod install`.
 
+In any file you'd like to use Moya in, don't forget to
+import the framework with `import Moya`.
+
 ### Carthage
+
 Carthage users can point to this repository and use whichever
 generated framework they'd like, `Moya`, `RxMoya`, or `ReactiveMoya`.
-The full Moya framework is bundled in each of those frameworks;
-importing more than one framework in a single file will result in
-ambiguous lookups at compile time.
+
+Make the following entry in your Cartfile:
 
 ```
-github "Moya/Moya"
+github "Moya/Moya" ~> 13.0
 ```
 
-Usage
----
+Then run `carthage update`.
 
-After [some setup](docs/Examples/Basic.md), using Moya is really simple. You can access an API like this:
+If this is your first time using Carthage in the project, you'll need to go through some additional steps as explained [over at Carthage](https://github.com/Carthage/Carthage#adding-frameworks-to-an-application).
+
+> NOTE: At this time, Carthage does not provide a way to build only specific repository submodules. All submodules and their dependencies will be built with the above command. However, you don't need to copy frameworks you aren't using into your project. For instance, if you aren't using `ReactiveSwift`, feel free to delete that framework along with `ReactiveMoya` from the Carthage Build directory after `carthage update` completes. Or if you are using `ReactiveSwift` but not `RxSwift`, then `RxMoya`, `RxTest`, `RxCocoa`, etc. can safely be deleted.
+
+### Manually
+
+- Open up Terminal, `cd` into your top-level project directory, and run the following command *if* your project is not initialized as a git repository:
+
+```bash
+$ git init
+```
+
+- Add Alamofire, Result & Moya as a git [submodule](http://git-scm.com/docs/git-submodule) by running the following commands:
+
+```bash
+$ git submodule add https://github.com/Alamofire/Alamofire.git
+$ git submodule add https://github.com/antitypical/Result.git
+$ git submodule add https://github.com/Moya/Moya.git
+```
+
+- Open the new `Alamofire` folder, and drag the `Alamofire.xcodeproj` into the Project Navigator of your application's Xcode project. Do the same with the `Result.xcodeproj` in the `Result` folder and `Moya.xcodeproj` in the `Moya` folder.
+
+> They should appear nested underneath your application's blue project icon. Whether it is above or below all the other Xcode groups does not matter.
+
+- Verify that the deployment targets of the `xcodeproj`s match that of your application target in the Project Navigator.
+- Next, select your application project in the Project Navigator (blue project icon) to navigate to the target configuration window and select the application target under the "Targets" heading in the sidebar.
+- In the tab bar at the top of that window, open the "General" panel.
+- Click on the `+` button under the "Embedded Binaries" section.
+- You will see two different `Alamofire.xcodeproj` folders each with two different versions of the `Alamofire.framework` nested inside a `Products` folder.
+
+> It does not matter which `Products` folder you choose from, but it does matter whether you choose the top or bottom `Alamofire.framework`.
+
+- Select the top `Alamofire.framework` for iOS and the bottom one for macOS.
+
+> You can verify which one you selected by inspecting the build log for your project. The build target for `Alamofire` will be listed as either `Alamofire iOS`, `Alamofire macOS`, `Alamofire tvOS` or `Alamofire watchOS`.
+
+- Click on the `+` button under "Embedded Binaries" again and add the build target you need for `Result`.
+- Click on the `+` button again and add the correct build target for `Moya`.
+
+- And that's it!
+
+> The three frameworks are automagically added as a target dependency, linked framework and embedded framework in a copy files build phase which is all you need to build on the simulator and a device.
+
+## Usage
+
+After [some setup](https://github.com/Moya/Moya/blob/master/docs/Examples/Basic.md), using Moya is really simple. You can access an API like this:
 
 ```swift
 provider = MoyaProvider<GitHub>()
-provider.request(.Zen) { result in
+provider.request(.zen) { result in
     switch result {
-    case let .Success(moyaResponse):
+    case let .success(moyaResponse):
         let data = moyaResponse.data
         let statusCode = moyaResponse.statusCode
         // do something with the response data or statusCode
-    case let .Failure(error):
+    case let .failure(error):
         // this means there was a network failure - either the request
         // wasn't sent (connectivity), or no response was received (server
         // timed out).  If the server responds with a 4xx or 5xx error, that
-        // will be sent as a ".Success"-ful response.
+        // will be sent as a ".success"-ful response.
     }
 }
 ```
@@ -101,7 +214,7 @@ into the enum you use to access the endpoint, like this:
 
 ```swift
 provider = MoyaProvider<GitHub>()
-provider.request(.UserProfile("ashfurrow")) { result in
+provider.request(.userProfile("ashfurrow")) { result in
     // do something with the result
 }
 ```
@@ -109,49 +222,28 @@ provider.request(.UserProfile("ashfurrow")) { result in
 No more typos in URLs. No more missing parameter values. No more messing with
 parameter encoding.
 
-For more examples, see the [documentation](docs/Examples).
+For more examples, see the [documentation](https://github.com/Moya/Moya/blob/master/docs/Examples).
 
-Reactive Extensions
--------------------
+## Reactive Extensions
 
 Even cooler are the reactive extensions. Moya provides reactive extensions for
-[ReactiveCocoa](https://github.com/ReactiveCocoa/ReactiveCocoa) and
+[ReactiveSwift](https://github.com/ReactiveCocoa/ReactiveSwift) and
 [RxSwift](https://github.com/ReactiveX/RxSwift).
 
-## ReactiveCocoa
+### ReactiveSwift
 
-After `ReactiveCocoa` [setup](docs/ReactiveCocoa.md), `request(:)` method
-immediately returns a `SignalProducer` (`RACSignal` is also available if needed)
-that you can start or bind or map or whateveryou want to do. To handle errors,
-for instance, we could do the following:
-
-```swift
-provider = ReactiveCocoaMoyaProvider<GitHub>()
-provider.request(.UserProfile("ashfurrow")).start { (event) -> Void in
-    switch event {
-    case .Next(let response):
-        image = UIImage(data: response.data)
-    case .Failed(let error):
-        print(error)
-    default:
-      break
-    }
-}
-```
-
-## RxSwift
-
-After `RxSwift` [setup](docs/RxSwift.md), `request(:)` method immediately
-returns an `Observable` that you can subscribe to or bind or map or whatever you
-want to do. To handle errors, for instance, we could do the following:
+[`ReactiveSwift` extension](https://github.com/Moya/Moya/blob/master/docs/ReactiveSwift.md) provides both `reactive.request(:callbackQueue:)` and 
+`reactive.requestWithProgress(:callbackQueue:)` methods that immediately return
+`SignalProducer`s that you can start, bind, map, or whatever you want to do.
+To handle errors, for instance, we could do the following:
 
 ```swift
-provider = RxMoyaProvider<GitHub>()
-provider.request(.UserProfile("ashfurrow")).subscribe { (event) -> Void in
+provider = MoyaProvider<GitHub>()
+provider.reactive.request(.userProfile("ashfurrow")).start { event in
     switch event {
-    case .Next(let response):
+    case let .value(response):
         image = UIImage(data: response.data)
-    case .Error(let error):
+    case let .failed(error):
         print(error)
     default:
         break
@@ -159,34 +251,45 @@ provider.request(.UserProfile("ashfurrow")).subscribe { (event) -> Void in
 }
 ```
 
----
+### RxSwift
+
+[`RxSwift` extension](https://github.com/Moya/Moya/blob/master/docs/RxSwift.md) also provide both `rx.request(:callbackQueue:)` and
+`rx.requestWithProgress(:callbackQueue:)` methods, but return type is
+different for both. In case of a normal `rx.request(:callbackQueue)`, the
+return type is `Single<Response>` which emits either single element or an
+error. In case of a `rx.requestWithProgress(:callbackQueue:)`, the return 
+type is `Observable<ProgressResponse>`, since we may get multiple events
+from progress and one last event which is a response.
+
+To handle errors, for instance, we could do the following:
+
+```swift
+provider = MoyaProvider<GitHub>()
+provider.rx.request(.userProfile("ashfurrow")).subscribe { event in
+    switch event {
+    case let .success(response):
+        image = UIImage(data: response.data)
+    case let .error(error):
+        print(error)
+    }
+}
+```
 
 In addition to the option of using signals instead of callback blocks, there are
-also a series of signal operators for RxSwift and ReactiveCocoa that will attempt
+also a series of signal operators for RxSwift and ReactiveSwift that will attempt
 to map the data received from the network response into either an image, some JSON,
 or a string, with `mapImage()`, `mapJSON()`, and `mapString()`, respectively. If the mapping is unsuccessful, you'll get an error on the signal. You also get handy methods
 for filtering out certain status codes. This means that you can place your code for
 handling API errors like 400's in the same places as code for handling invalid
 responses.
 
-Community Extensions
---------------------
+## Community Projects
 
-Moya has a great community around it and some people have created some very helpful extensions.
+[Moya has a great community around it and some people have created some very helpful extensions](https://github.com/Moya/Moya/blob/master/docs/CommunityProjects.md).
 
-- [Moya-ObjectMapper](https://github.com/ivanbruel/Moya-ObjectMapper) - ObjectMapper bindings for Moya for easier JSON serialization
-- [Moya-SwiftyJSONMapper](https://github.com/AvdLee/Moya-SwiftyJSONMapper) - SwiftyJSON bindings for Moya for easier JSON serialization
-- [Moya-Argo](https://github.com/wattson12/Moya-Argo) - Argo bindings for Moya for easier JSON serialization
-- [Moya-ModelMapper](https://github.com/sunshinejr/Moya-ModelMapper) - ModelMapper bindings for Moya for easier JSON serialization
-- [Moya-Gloss](https://github.com/spxrogers/Moya-Gloss) - Gloss bindings for Moya for easier JSON serialization
-- [Moya-JASON](https://github.com/DroidsOnRoids/Moya-JASON) - JASON bindings for Moya for easier JSON serialization
+## Contributing
 
-We appreciate all the work being done by the community around Moya. If you would like to have your extension featured in the list above, simply create a pull request adding your extensions to the list.
-
-Contributing
-------------
-
-Hey! Like Moya? Awesome! We could actually really use your help!
+Hey! Do you like Moya? Awesome! We could actually really use your help!
 
 Open source isn't just writing code. Moya could use your help with any of the
 following:
@@ -199,13 +302,27 @@ following:
 - Helping to manage issue priorities.
 - Fixing bugs/new features.
 
-If any of that sounds cool to you, send a pull request! After a few
-contributions, we'll add you as an admin to the repo so you can merge pull
-requests and help steer the ship :ship:
+If any of that sounds cool to you, send a pull request! After your first
+contribution, we will add you as a member to the repo so you can merge pull
+requests and help steer the ship :ship: You can read more details about that [in our contributor guidelines](https://github.com/Moya/Moya/blob/master/Contributing.md).
 
-Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by [its terms](https://github.com/Moya/contributors/blob/master/Code of Conduct.md).
+Moya's community has a tremendous positive energy, and the maintainers are committed to keeping things awesome. Like [in the CocoaPods community](https://github.com/CocoaPods/CocoaPods/wiki/Communication-&-Design-Rules), always assume positive intent; even if a comment sounds mean-spirited, give the person the benefit of the doubt.
 
-License
--------
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project you agree to abide by [its terms](https://github.com/Moya/Moya/blob/master/Code%20of%20Conduct.md).
 
-Moya is released under an MIT license. See LICENSE for more information.
+### Adding new source files
+
+If you add or remove a source file from Moya, a corresponding change needs to be made to the `Moya.xcodeproj` project at the root of this repository. This project is used for Carthage. Don't worry, you'll get an automated warning when submitting a pull request if you forget.
+
+### Help us improve Moya documentation
+Whether you’re a core member or a user trying it out for the first time, you can make a valuable contribution to Moya by improving the documentation. Help us by:
+
+- sending us feedback about something you thought was confusing or simply missing
+- suggesting better wording or ways of explaining certain topics
+- sending us a pull request via GitHub
+- improving the [Chinese documentation](https://github.com/Moya/Moya/blob/master/Readme_CN.md)
+
+
+## License
+
+Moya is released under an MIT license. See [License.md](https://github.com/Moya/Moya/blob/master/License.md) for more information.

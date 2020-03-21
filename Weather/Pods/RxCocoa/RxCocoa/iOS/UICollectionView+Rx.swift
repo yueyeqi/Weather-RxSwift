@@ -8,16 +8,13 @@
 
 #if os(iOS) || os(tvOS)
 
-import Foundation
-#if !RX_NO_MODULE
 import RxSwift
-#endif
 import UIKit
 
 // Items
 
-extension UICollectionView {
-    
+extension Reactive where Base: UICollectionView {
+
     /**
     Binds sequences of elements to collection view items.
     
@@ -34,21 +31,21 @@ extension UICollectionView {
          ])
 
          items
-         .bindTo(collectionView.rx_itemsWithCellFactory) { (collectionView, row, element) in
-             let indexPath = NSIndexPath(forItem: row, inSection: 0)
-             let cell = collectionView.dequeueReusableCellWithReuseIdentifier("Cell", forIndexPath: indexPath) as! NumberCell
+         .bind(to: collectionView.rx.items) { (collectionView, row, element) in
+            let indexPath = IndexPath(row: row, section: 0)
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath) as! NumberCell
              cell.value?.text = "\(element) @ \(row)"
              return cell
          }
-         .addDisposableTo(disposeBag)
+         .disposed(by: disposeBag)
     */
-    public func rx_itemsWithCellFactory<S: SequenceType, O: ObservableType where O.E == S>
-        (source: O)
-        -> (cellFactory: (UICollectionView, Int, S.Generator.Element) -> UICollectionViewCell)
-        -> Disposable {
+    public func items<S: Sequence, O: ObservableType>
+        (_ source: O)
+        -> (_ cellFactory: @escaping (UICollectionView, Int, S.Iterator.Element) -> UICollectionViewCell)
+        -> Disposable where O.E == S {
         return { cellFactory in
             let dataSource = RxCollectionViewReactiveArrayDataSourceSequenceWrapper<S>(cellFactory: cellFactory)
-            return self.rx_itemsWithDataSource(dataSource)(source: source)
+            return self.items(dataSource: dataSource)(source)
         }
         
     }
@@ -71,29 +68,30 @@ extension UICollectionView {
          ])
 
          items
-             .bindTo(collectionView.rx_itemsWithCellIdentifier("Cell", cellType: NumberCell.self)) { (row, element, cell) in
+             .bind(to: collectionView.rx.items(cellIdentifier: "Cell", cellType: NumberCell.self)) { (row, element, cell) in
                 cell.value?.text = "\(element) @ \(row)"
              }
-             .addDisposableTo(disposeBag)
+             .disposed(by: disposeBag)
     */
-    public func rx_itemsWithCellIdentifier<S: SequenceType, Cell: UICollectionViewCell, O : ObservableType where O.E == S>
+    public func items<S: Sequence, Cell: UICollectionViewCell, O : ObservableType>
         (cellIdentifier: String, cellType: Cell.Type = Cell.self)
-        -> (source: O)
-        -> (configureCell: (Int, S.Generator.Element, Cell) -> Void)
-        -> Disposable {
+        -> (_ source: O)
+        -> (_ configureCell: @escaping (Int, S.Iterator.Element, Cell) -> Void)
+        -> Disposable where O.E == S {
         return { source in
             return { configureCell in
-                let dataSource = RxCollectionViewReactiveArrayDataSourceSequenceWrapper<S> { (cv, i, item) in
-                    let indexPath = NSIndexPath(forItem: i, inSection: 0)
-                    let cell = cv.dequeueReusableCellWithReuseIdentifier(cellIdentifier, forIndexPath: indexPath) as! Cell
+                let dataSource = RxCollectionViewReactiveArrayDataSourceSequenceWrapper<S> { cv, i, item in
+                    let indexPath = IndexPath(item: i, section: 0)
+                    let cell = cv.dequeueReusableCell(withReuseIdentifier: cellIdentifier, for: indexPath) as! Cell
                     configureCell(i, item, cell)
                     return cell
                 }
                     
-                return self.rx_itemsWithDataSource(dataSource)(source: source)
+                return self.items(dataSource: dataSource)(source)
             }
         }
     }
+
     
     /**
     Binds sequences of elements to collection view items using a custom reactive data used to perform the transformation.
@@ -125,26 +123,33 @@ extension UICollectionView {
          ])
 
          dataSource.configureCell = { (dataSource, cv, indexPath, element) in
-             let cell = cv.dequeueReusableCellWithReuseIdentifier("Cell", forIndexPath: indexPath) as! NumberCell
+             let cell = cv.dequeueReusableCell(withReuseIdentifier: "Cell", for: indexPath) as! NumberCell
              cell.value?.text = "\(element) @ row \(indexPath.row)"
              return cell
          }
 
          items
-            .bindTo(collectionView.rx_itemsWithDataSource(dataSource))
-            .addDisposableTo(disposeBag)
+            .bind(to: collectionView.rx.items(dataSource: dataSource))
+            .disposed(by: disposeBag)
     */
-    public func rx_itemsWithDataSource<
-            DataSource: protocol<RxCollectionViewDataSourceType, UICollectionViewDataSource>,
-            O: ObservableType where DataSource.Element == O.E
-        >
+    public func items<
+            DataSource: RxCollectionViewDataSourceType & UICollectionViewDataSource,
+            O: ObservableType>
         (dataSource: DataSource)
-        -> (source: O)
-        -> Disposable  {
+        -> (_ source: O)
+        -> Disposable where DataSource.Element == O.E
+          {
         return { source in
-            
-            return source.subscribeProxyDataSourceForObject(self, dataSource: dataSource, retainDataSource: true) { [weak self] (_: RxCollectionViewDataSourceProxy, event) -> Void in
-                guard let collectionView = self else {
+            // This is called for sideeffects only, and to make sure delegate proxy is in place when
+            // data source is being bound.
+            // This is needed because theoretically the data source subscription itself might
+            // call `self.rx.delegate`. If that happens, it might cause weird side effects since
+            // setting data source will set delegate, and UICollectionView might get into a weird state.
+            // Therefore it's better to set delegate proxy first, just to be sure.
+            _ = self.delegate
+            // Strong reference is needed because data source is in use until result subscription is disposed
+            return source.subscribeProxyDataSource(ofObject: self.base, dataSource: dataSource, retainDataSource: true) { [weak collectionView = self.base] (_: RxCollectionViewDataSourceProxy, event) -> Void in
+                guard let collectionView = collectionView else {
                     return
                 }
                 dataSource.collectionView(collectionView, observedEvent: event)
@@ -153,147 +158,221 @@ extension UICollectionView {
     }
 }
 
-extension UICollectionView {
-   
-    /**
-    Factory method that enables subclasses to implement their own `rx_delegate`.
-    
-    - returns: Instance of delegate proxy that wraps `delegate`.
-    */
-    public override func rx_createDelegateProxy() -> RxScrollViewDelegateProxy {
-        return RxCollectionViewDelegateProxy(parentObject: self)
-    }
+extension Reactive where Base: UICollectionView {
+    public typealias DisplayCollectionViewCellEvent = (cell: UICollectionViewCell, at: IndexPath)
+    public typealias DisplayCollectionViewSupplementaryViewEvent = (supplementaryView: UICollectionReusableView, elementKind: String, at: IndexPath)
 
-    /**
-    Factory method that enables subclasses to implement their own `rx_dataSource`.
-    
-    - returns: Instance of delegate proxy that wraps `dataSource`.
-    */
-    public func rx_createDataSourceProxy() -> RxCollectionViewDataSourceProxy {
-        return RxCollectionViewDataSourceProxy(parentObject: self)
+    /// Reactive wrapper for `dataSource`.
+    ///
+    /// For more information take a look at `DelegateProxyType` protocol documentation.
+    public var dataSource: DelegateProxy<UICollectionView, UICollectionViewDataSource> {
+        return RxCollectionViewDataSourceProxy.proxy(for: base)
     }
     
-    /**
-    Reactive wrapper for `dataSource`.
-    
-    For more information take a look at `DelegateProxyType` protocol documentation.
-    */
-    public var rx_dataSource: DelegateProxy {
-        return RxCollectionViewDataSourceProxy.proxyForObject(self)
-    }
-    
-    /**
-    Installs data source as forwarding delegate on `rx_dataSource`. 
-    Data source won't be retained.
-    
-    It enables using normal delegate mechanism with reactive delegate mechanism.
-    
-    - parameter dataSource: Data source object.
-    - returns: Disposable object that can be used to unbind the data source.
-    */
-    public func rx_setDataSource(dataSource: UICollectionViewDataSource)
+    /// Installs data source as forwarding delegate on `rx.dataSource`.
+    /// Data source won't be retained.
+    ///
+    /// It enables using normal delegate mechanism with reactive delegate mechanism.
+    ///
+    /// - parameter dataSource: Data source object.
+    /// - returns: Disposable object that can be used to unbind the data source.
+    public func setDataSource(_ dataSource: UICollectionViewDataSource)
         -> Disposable {
-        return RxCollectionViewDataSourceProxy.installForwardDelegate(dataSource, retainDelegate: false, onProxyForObject: self)
+        return RxCollectionViewDataSourceProxy.installForwardDelegate(dataSource, retainDelegate: false, onProxyForObject: self.base)
     }
    
-    /**
-    Reactive wrapper for `delegate` message `collectionView:didSelectItemAtIndexPath:`.
-    */
-    public var rx_itemSelected: ControlEvent<NSIndexPath> {
-        let source = rx_delegate.observe(#selector(UICollectionViewDelegate.collectionView(_:didSelectItemAtIndexPath:)))
+    /// Reactive wrapper for `delegate` message `collectionView(_:didSelectItemAtIndexPath:)`.
+    public var itemSelected: ControlEvent<IndexPath> {
+        let source = delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didSelectItemAt:)))
             .map { a in
-                return a[1] as! NSIndexPath
+                return try castOrThrow(IndexPath.self, a[1])
             }
         
         return ControlEvent(events: source)
     }
 
-    /**
-     Reactive wrapper for `delegate` message `collectionView:didSelectItemAtIndexPath:`.
-     */
-    public var rx_itemDeselected: ControlEvent<NSIndexPath> {
-        let source = rx_delegate.observe(#selector(UICollectionViewDelegate.collectionView(_:didDeselectItemAtIndexPath:)))
+    /// Reactive wrapper for `delegate` message `collectionView(_:didDeselectItemAtIndexPath:)`.
+    public var itemDeselected: ControlEvent<IndexPath> {
+        let source = delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didDeselectItemAt:)))
             .map { a in
-                return a[1] as! NSIndexPath
+                return try castOrThrow(IndexPath.self, a[1])
         }
 
         return ControlEvent(events: source)
     }
 
-    /**
-    Reactive wrapper for `delegate` message `collectionView:didSelectItemAtIndexPath:`.
+    /// Reactive wrapper for `delegate` message `collectionView(_:didHighlightItemAt:)`.
+    public var itemHighlighted: ControlEvent<IndexPath> {
+        let source = delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didHighlightItemAt:)))
+            .map { a in
+                return try castOrThrow(IndexPath.self, a[1])
+            }
+        
+        return ControlEvent(events: source)
+    }
 
-    It can be only used when one of the `rx_itemsWith*` methods is used to bind observable sequence,
-    or any other data source conforming to `SectionedViewDataSourceType` protocol.
+    /// Reactive wrapper for `delegate` message `collectionView(_:didUnhighlightItemAt:)`.
+    public var itemUnhighlighted: ControlEvent<IndexPath> {
+        let source = delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didUnhighlightItemAt:)))
+            .map { a in
+                return try castOrThrow(IndexPath.self, a[1])
+            }
+        
+        return ControlEvent(events: source)
+    }
+
+    /// Reactive wrapper for `delegate` message `collectionView:willDisplay:forItemAt:`.
+    public var willDisplayCell: ControlEvent<DisplayCollectionViewCellEvent> {
+        let source: Observable<DisplayCollectionViewCellEvent> = self.delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:willDisplay:forItemAt:)))
+            .map { a in
+                return (try castOrThrow(UICollectionViewCell.self, a[1]), try castOrThrow(IndexPath.self, a[2]))
+            }
+        
+        return ControlEvent(events: source)
+    }
+
+    /// Reactive wrapper for `delegate` message `collectionView(_:willDisplaySupplementaryView:forElementKind:at:)`.
+    public var willDisplaySupplementaryView: ControlEvent<DisplayCollectionViewSupplementaryViewEvent> {
+        let source: Observable<DisplayCollectionViewSupplementaryViewEvent> = self.delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:willDisplaySupplementaryView:forElementKind:at:)))
+            .map { a in
+                return (try castOrThrow(UICollectionReusableView.self, a[1]),
+                        try castOrThrow(String.self, a[2]),
+                        try castOrThrow(IndexPath.self, a[3]))
+            }
+
+        return ControlEvent(events: source)
+    }
+
+    /// Reactive wrapper for `delegate` message `collectionView:didEndDisplaying:forItemAt:`.
+    public var didEndDisplayingCell: ControlEvent<DisplayCollectionViewCellEvent> {
+        let source: Observable<DisplayCollectionViewCellEvent> = self.delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didEndDisplaying:forItemAt:)))
+            .map { a in
+                return (try castOrThrow(UICollectionViewCell.self, a[1]), try castOrThrow(IndexPath.self, a[2]))
+            }
+
+        return ControlEvent(events: source)
+    }
+
+    /// Reactive wrapper for `delegate` message `collectionView(_:didEndDisplayingSupplementaryView:forElementOfKind:at:)`.
+    public var didEndDisplayingSupplementaryView: ControlEvent<DisplayCollectionViewSupplementaryViewEvent> {
+        let source: Observable<DisplayCollectionViewSupplementaryViewEvent> = self.delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didEndDisplayingSupplementaryView:forElementOfKind:at:)))
+            .map { a in
+                return (try castOrThrow(UICollectionReusableView.self, a[1]),
+                        try castOrThrow(String.self, a[2]),
+                        try castOrThrow(IndexPath.self, a[3]))
+            }
+
+        return ControlEvent(events: source)
+    }
     
-     ```
-         collectionView.rx_modelSelected(MyModel.self)
-            .map { ...
-     ```
-    */
-    public func rx_modelSelected<T>(modelType: T.Type) -> ControlEvent<T> {
-        let source: Observable<T> = rx_itemSelected.flatMap { [weak self] indexPath -> Observable<T> in
-            guard let view = self else {
+    /// Reactive wrapper for `delegate` message `collectionView(_:didSelectItemAtIndexPath:)`.
+    ///
+    /// It can be only used when one of the `rx.itemsWith*` methods is used to bind observable sequence,
+    /// or any other data source conforming to `SectionedViewDataSourceType` protocol.
+    ///
+    /// ```
+    ///     collectionView.rx.modelSelected(MyModel.self)
+    ///        .map { ...
+    /// ```
+    public func modelSelected<T>(_ modelType: T.Type) -> ControlEvent<T> {
+        let source: Observable<T> = itemSelected.flatMap { [weak view = self.base as UICollectionView] indexPath -> Observable<T> in
+            guard let view = view else {
                 return Observable.empty()
             }
 
-            return Observable.just(try view.rx_modelAtIndexPath(indexPath))
+            return Observable.just(try view.rx.model(at: indexPath))
         }
         
         return ControlEvent(events: source)
     }
 
-    /**
-     Reactive wrapper for `delegate` message `collectionView:didSelectItemAtIndexPath:`.
-
-     It can be only used when one of the `rx_itemsWith*` methods is used to bind observable sequence,
-     or any other data source conforming to `SectionedViewDataSourceType` protocol.
-
-     ```
-         collectionView.rx_modelDeselected(MyModel.self)
-            .map { ...
-     ```
-     */
-    public func rx_modelDeselected<T>(modelType: T.Type) -> ControlEvent<T> {
-        let source: Observable<T> = rx_itemDeselected.flatMap { [weak self] indexPath -> Observable<T> in
-            guard let view = self else {
+    /// Reactive wrapper for `delegate` message `collectionView(_:didSelectItemAtIndexPath:)`.
+    ///
+    /// It can be only used when one of the `rx.itemsWith*` methods is used to bind observable sequence,
+    /// or any other data source conforming to `SectionedViewDataSourceType` protocol.
+    ///
+    /// ```
+    ///     collectionView.rx.modelDeselected(MyModel.self)
+    ///        .map { ...
+    /// ```
+    public func modelDeselected<T>(_ modelType: T.Type) -> ControlEvent<T> {
+        let source: Observable<T> = itemDeselected.flatMap { [weak view = self.base as UICollectionView] indexPath -> Observable<T> in
+            guard let view = view else {
                 return Observable.empty()
             }
 
-            return Observable.just(try view.rx_modelAtIndexPath(indexPath))
+            return Observable.just(try view.rx.model(at: indexPath))
         }
 
         return ControlEvent(events: source)
     }
     
-    /**
-    Syncronous helper method for retrieving a model at indexPath through a reactive data source
-    */
-    public func rx_modelAtIndexPath<T>(indexPath: NSIndexPath) throws -> T {
-        let dataSource: SectionedViewDataSourceType = castOrFatalError(self.rx_dataSource.forwardToDelegate(), message: "This method only works in case one of the `rx_itemsWith*` methods was used.")
+    /// Synchronous helper method for retrieving a model at indexPath through a reactive data source
+    public func model<T>(at indexPath: IndexPath) throws -> T {
+        let dataSource: SectionedViewDataSourceType = castOrFatalError(self.dataSource.forwardToDelegate(), message: "This method only works in case one of the `rx.itemsWith*` methods was used.")
         
-        let element = try dataSource.modelAtIndexPath(indexPath)
+        let element = try dataSource.model(at: indexPath)
 
-        return element as! T
+        return try castOrThrow(T.self, element)
     }
+}
+
+@available(iOS 10.0, tvOS 10.0, *)
+extension Reactive where Base: UICollectionView {
+
+    /// Reactive wrapper for `prefetchDataSource`.
+    ///
+    /// For more information take a look at `DelegateProxyType` protocol documentation.
+    public var prefetchDataSource: DelegateProxy<UICollectionView, UICollectionViewDataSourcePrefetching> {
+        return RxCollectionViewDataSourcePrefetchingProxy.proxy(for: base)
+    }
+
+    /**
+     Installs prefetch data source as forwarding delegate on `rx.prefetchDataSource`.
+     Prefetch data source won't be retained.
+
+     It enables using normal delegate mechanism with reactive delegate mechanism.
+
+     - parameter prefetchDataSource: Prefetch data source object.
+     - returns: Disposable object that can be used to unbind the data source.
+     */
+    public func setPrefetchDataSource(_ prefetchDataSource: UICollectionViewDataSourcePrefetching)
+        -> Disposable {
+            return RxCollectionViewDataSourcePrefetchingProxy.installForwardDelegate(prefetchDataSource, retainDelegate: false, onProxyForObject: self.base)
+    }
+
+    /// Reactive wrapper for `prefetchDataSource` message `collectionView(_:prefetchItemsAt:)`.
+    public var prefetchItems: ControlEvent<[IndexPath]> {
+        let source = RxCollectionViewDataSourcePrefetchingProxy.proxy(for: base).prefetchItemsPublishSubject
+        return ControlEvent(events: source)
+    }
+
+    /// Reactive wrapper for `prefetchDataSource` message `collectionView(_:cancelPrefetchingForItemsAt:)`.
+    public var cancelPrefetchingForItems: ControlEvent<[IndexPath]> {
+        let source = prefetchDataSource.methodInvoked(#selector(UICollectionViewDataSourcePrefetching.collectionView(_:cancelPrefetchingForItemsAt:)))
+            .map { a in
+                return try castOrThrow(Array<IndexPath>.self, a[1])
+        }
+
+        return ControlEvent(events: source)
+    }
+
 }
 #endif
 
 #if os(tvOS)
 
-extension UICollectionView {
+extension Reactive where Base: UICollectionView {
     
-    /**
-     Reactive wrapper for `delegate` message `collectionView:didUpdateFocusInContext:withAnimationCoordinator:`.
-     */
-    public var rx_didUpdateFocusInContextWithAnimationCoordinator: ControlEvent<(context: UIFocusUpdateContext, animationCoordinator: UIFocusAnimationCoordinator)> {
-        
-        let source = rx_delegate.observe(#selector(UICollectionViewDelegate.collectionView(_:didUpdateFocusInContext:withAnimationCoordinator:)))
-            .map { a -> (context: UIFocusUpdateContext, animationCoordinator: UIFocusAnimationCoordinator) in
-                let context = a[1] as! UIFocusUpdateContext
-                let animationCoordinator = a[2] as! UIFocusAnimationCoordinator
+    /// Reactive wrapper for `delegate` message `collectionView(_:didUpdateFocusInContext:withAnimationCoordinator:)`.
+    public var didUpdateFocusInContextWithAnimationCoordinator: ControlEvent<(context: UICollectionViewFocusUpdateContext, animationCoordinator: UIFocusAnimationCoordinator)> {
+
+        let source = delegate.methodInvoked(#selector(UICollectionViewDelegate.collectionView(_:didUpdateFocusIn:with:)))
+            .map { a -> (context: UICollectionViewFocusUpdateContext, animationCoordinator: UIFocusAnimationCoordinator) in
+                let context = try castOrThrow(UICollectionViewFocusUpdateContext.self, a[1])
+                let animationCoordinator = try castOrThrow(UIFocusAnimationCoordinator.self, a[2])
                 return (context: context, animationCoordinator: animationCoordinator)
-        }
+            }
 
         return ControlEvent(events: source)
     }

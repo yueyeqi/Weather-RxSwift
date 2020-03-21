@@ -1,29 +1,24 @@
 //
 //  UIViewController+Rx.swift
-//  Rx
+//  RxCocoa
 //
 //  Created by Kyle Fuller on 27/05/2016.
 //  Copyright © 2016 Krunoslav Zaher. All rights reserved.
 //
 
-import Foundation
+#if os(iOS) || os(tvOS)
 
-#if os(iOS)
-  import UIKit
+    import UIKit
+    import RxSwift
 
-#if !RX_NO_MODULE
-  import RxSwift
-#endif
+    extension Reactive where Base: UIViewController {
 
-  extension UIViewController {
-
-    /**
-     Bindable sink for `title`.
-     */
-    public var rx_title: AnyObserver<String> {
-      return UIBindingObserver(UIElement: self) { viewController, title in
-        viewController.title = title
-      }.asObserver()
+        /// Bindable sink for `title`.
+        public var title: Binder<String> {
+            return Binder(self.base) { viewController, title in
+                viewController.title = title
+            }
+        }
+    
     }
-  }
 #endif

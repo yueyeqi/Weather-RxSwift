@@ -1,20 +1,18 @@
 //
 //  SynchronizedOnType.swift
-//  Rx
+//  RxSwift
 //
 //  Created by Krunoslav Zaher on 10/25/15.
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-import Foundation
-
 protocol SynchronizedOnType : class, ObserverType, Lock {
-    func _synchronized_on(event: Event<E>)
+    func _synchronized_on(_ event: Event<E>)
 }
 
 extension SynchronizedOnType {
-    func synchronizedOn(event: Event<E>) {
-        lock(); defer { unlock() }
-        _synchronized_on(event)
+    func synchronizedOn(_ event: Event<E>) {
+        self.lock(); defer { self.unlock() }
+        self._synchronized_on(event)
     }
 }

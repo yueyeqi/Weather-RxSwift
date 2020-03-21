@@ -10,32 +10,20 @@ import Foundation
 import UIKit
 
 extension UIColor {
-    class func colorWithHex(hexStr: String) -> UIColor {
-        var formatStr: String!
-        if let index = hexStr.rangeOfString("0X") {
-            formatStr = hexStr.substringFromIndex(index.endIndex)
-        } else if let index = hexStr.rangeOfString("#") {
-            formatStr = hexStr.substringFromIndex(index.endIndex)
-        } else if hexStr.lengthOfBytesUsingEncoding(NSUTF8StringEncoding) == 6 {
-            formatStr = hexStr
+    static func colorWithHex(hexStr: String) -> UIColor? {
+        if hexStr.count <= 0 || hexStr.count != 7 || hexStr == "(null)" || hexStr == "<null>" {
+            return nil
         }
-        
-        if formatStr == nil {
-            return UIColor.whiteColor()
-        }
-        
-        let rString = formatStr.substringWithRange(Range<String.Index>(formatStr.startIndex ..< formatStr.startIndex.advancedBy(2)))
-        let gString = formatStr.substringWithRange(Range<String.Index>(formatStr.startIndex.advancedBy(2) ..< formatStr.startIndex.advancedBy(4)))
-        let bString = formatStr.substringWithRange(Range<String.Index>(formatStr.startIndex.advancedBy(4) ..< formatStr.endIndex))
-        
-        // Scan values
-        var r: UInt32 = 0, g: UInt32 = 0, b: UInt32 = 0
-        
-        NSScanner(string: rString).scanHexInt(&r)
-        NSScanner(string: gString).scanHexInt(&g)
-        NSScanner(string: bString).scanHexInt(&b)
-        
-        return UIColor(red: CGFloat(r) / 255.0, green: CGFloat(g) / 255.0, blue: CGFloat(b) / 255.0, alpha: 1.0)
+        var red: UInt32 = 0x0
+        var green: UInt32 = 0x0
+        var blue: UInt32 = 0x0
+        let redString = String(hexStr[hexStr.index(hexStr.startIndex, offsetBy: 1)...hexStr.index(hexStr.startIndex, offsetBy: 2)])
+        let greenString = String(hexStr[hexStr.index(hexStr.startIndex, offsetBy: 3)...hexStr.index(hexStr.startIndex, offsetBy: 4)])
+        let blueString = String(hexStr[hexStr.index(hexStr.startIndex, offsetBy: 5)...hexStr.index(hexStr.startIndex, offsetBy: 6)])
+        Scanner(string: redString).scanHexInt32(&red)
+        Scanner(string: greenString).scanHexInt32(&green)
+        Scanner(string: blueString).scanHexInt32(&blue)
+        let hexColor = UIColor.init(red: CGFloat(red)/255.0, green: CGFloat(green)/255.0, blue: CGFloat(blue)/255.0, alpha: 1)
+        return hexColor
     }
-
 }

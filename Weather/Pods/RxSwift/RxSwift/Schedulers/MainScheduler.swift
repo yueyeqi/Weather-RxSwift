@@ -1,15 +1,18 @@
 //
 //  MainScheduler.swift
-//  Rx
+//  RxSwift
 //
 //  Created by Krunoslav Zaher on 2/8/15.
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-import Foundation
+import Dispatch
+#if !os(Linux)
+    import Foundation
+#endif
 
 /**
-Abstracts work that needs to be performed on `MainThread`. In case `schedule` methods are called from main thread, it will perform action immediately without scheduling.
+Abstracts work that needs to be performed on `DispatchQueue.main`. In case `schedule` methods are called from `DispatchQueue.main`, it will perform action immediately without scheduling.
 
 This scheduler is usually used to perform UI work.
 
@@ -20,52 +23,56 @@ operator please use `ConcurrentMainScheduler` because it is more optimized for t
 */
 public final class MainScheduler : SerialDispatchQueueScheduler {
 
-    private let _mainQueue: dispatch_queue_t
+    private let _mainQueue: DispatchQueue
 
-    var numberEnqueued: AtomicInt = 0
+    let numberEnqueued = AtomicInt(0)
 
-    private init() {
-        _mainQueue = dispatch_get_main_queue()
-        super.init(serialQueue: _mainQueue)
+    /// Initializes new instance of `MainScheduler`.
+    public init() {
+        self._mainQueue = DispatchQueue.main
+        super.init(serialQueue: self._mainQueue)
     }
 
-    /**
-    Singleton instance of `MainScheduler`
-    */
+    /// Singleton instance of `MainScheduler`
     public static let instance = MainScheduler()
 
-    /**
-    Singleton instance of `MainScheduler` that always schedules work asynchronously
-    and doesn't perform optimizations for calls scheduled from main thread.
-    */
-    public static let asyncInstance = SerialDispatchQueueScheduler(serialQueue: dispatch_get_main_queue())
+    /// Singleton instance of `MainScheduler` that always schedules work asynchronously
+    /// and doesn't perform optimizations for calls scheduled from main queue.
+    public static let asyncInstance = SerialDispatchQueueScheduler(serialQueue: DispatchQueue.main)
 
-    /**
-    In case this method is called on a background thread it will throw an exception.
-    */
+    /// In case this method is called on a background thread it will throw an exception.
     public class func ensureExecutingOnScheduler(errorMessage: String? = nil) {
-        if !NSThread.currentThread().isMainThread {
-            rxFatalError(errorMessage ?? "Executing on backgound thread. Please use `MainScheduler.instance.schedule` to schedule work on main thread.")
+        if !DispatchQueue.isMain {
+            rxFatalError(errorMessage ?? "Executing on background thread. Please use `MainScheduler.instance.schedule` to schedule work on main thread.")
         }
     }
 
-    override func scheduleInternal<StateType>(state: StateType, action: StateType -> Disposable) -> Disposable {
-        let currentNumberEnqueued = AtomicIncrement(&numberEnqueued)
+    /// In case this method is running on a background thread it will throw an exception.
+    public class func ensureRunningOnMainThread(errorMessage: String? = nil) {
+        #if !os(Linux) // isMainThread is not implemented in Linux Foundation
+            guard Thread.isMainThread else {
+                rxFatalError(errorMessage ?? "Running on background thread.")
+            }
+        #endif
+    }
 
-        if NSThread.currentThread().isMainThread && currentNumberEnqueued == 1 {
+    override func scheduleInternal<StateType>(_ state: StateType, action: @escaping (StateType) -> Disposable) -> Disposable {
+        let previousNumberEnqueued = increment(self.numberEnqueued)
+
+        if DispatchQueue.isMain && previousNumberEnqueued == 0 {
             let disposable = action(state)
-            AtomicDecrement(&numberEnqueued)
+            decrement(self.numberEnqueued)
             return disposable
         }
 
         let cancel = SingleAssignmentDisposable()
 
-        dispatch_async(_mainQueue) {
-            if !cancel.disposed {
-                action(state)
+        self._mainQueue.async {
+            if !cancel.isDisposed {
+                _ = action(state)
             }
 
-            AtomicDecrement(&self.numberEnqueued)
+            decrement(self.numberEnqueued)
         }
 
         return cancel

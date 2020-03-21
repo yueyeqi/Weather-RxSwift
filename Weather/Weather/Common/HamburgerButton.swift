@@ -10,148 +10,164 @@ import CoreGraphics
 import QuartzCore
 import UIKit
 
-class HamburgerButton : UIButton {
-    let shortStroke: CGPath = {
-        let path = CGPathCreateMutable()
-        CGPathMoveToPoint(path, nil, 2, 2)
-        CGPathAddLineToPoint(path, nil, 28, 2)
+public class HamburgerButton: UIButton {
 
-        return path
-    }()
-
-    let outline: CGPath = {
-        let path = CGPathCreateMutable()
-        CGPathMoveToPoint(path, nil, 10, 27)
-        CGPathAddCurveToPoint(path, nil, 12.00, 27.00, 28.02, 27.00, 40, 27)
-        CGPathAddCurveToPoint(path, nil, 55.92, 27.00, 50.47,  2.00, 27,  2)
-        CGPathAddCurveToPoint(path, nil, 13.16,  2.00,  2.00, 13.16,  2, 27)
-        CGPathAddCurveToPoint(path, nil,  2.00, 40.84, 13.16, 52.00, 27, 52)
-        CGPathAddCurveToPoint(path, nil, 40.84, 52.00, 52.00, 40.84, 52, 27)
-        CGPathAddCurveToPoint(path, nil, 52.00, 13.16, 42.39,  2.00, 27,  2)
-        CGPathAddCurveToPoint(path, nil, 13.16,  2.00,  2.00, 13.16,  2, 27)
-
-        return path
-    }()
-
-    let menuStrokeStart: CGFloat = 0.325
-    let menuStrokeEnd: CGFloat = 0.9
-
-    let hamburgerStrokeStart: CGFloat = 0.028
-    let hamburgerStrokeEnd: CGFloat = 0.111
-    
-    required init?(coder aDecoder: NSCoder) {
-        super.init(coder: aDecoder)
+    public var color: UIColor = UIColor.white {
+        didSet {
+            for shapeLayer in shapeLayers {
+                shapeLayer.strokeColor = color.cgColor
+            }
+        }
     }
+
+    private let top: CAShapeLayer = CAShapeLayer()
+    private let middle: CAShapeLayer = CAShapeLayer()
+    private let bottom: CAShapeLayer = CAShapeLayer()
+    private let width: CGFloat = 18
+    private let height: CGFloat = 16
+    private let topYPosition: CGFloat = 2
+    private let middleYPosition: CGFloat = 7
+    private let bottomYPosition: CGFloat = 12
 
     override init(frame: CGRect) {
         super.init(frame: frame)
+        commonInit()
+    }
 
-        self.top.path = shortStroke
-        self.middle.path = outline
-        self.bottom.path = shortStroke
+    required public init?(coder aDecoder: NSCoder) {
+        super.init(coder: aDecoder)
+        commonInit()
+    }
 
-        for layer in [ self.top, self.middle, self.bottom ] {
-            layer.fillColor = nil
-            layer.strokeColor = UIColor.whiteColor().CGColor
-            layer.lineWidth = 4
-            layer.miterLimit = 4
-            layer.lineCap = kCALineCapRound
-            layer.masksToBounds = true
+    private func commonInit() {
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: 0, y: 0))
+        path.addLine(to: CGPoint(x: width, y: 0))
 
-            let strokingPath = CGPathCreateCopyByStrokingPath(layer.path, nil, 4, .Round, .Miter, 4)
+        for shapeLayer in shapeLayers {
+            shapeLayer.path = path.cgPath
+            shapeLayer.lineWidth = 2
+            shapeLayer.strokeColor = color.cgColor
 
-            layer.bounds = CGPathGetPathBoundingBox(strokingPath)
-
-            layer.actions = [
-                "strokeStart": NSNull(),
-                "strokeEnd": NSNull(),
-                "transform": NSNull()
+            // Disables implicit animations.
+            shapeLayer.actions = [
+                "transform": NSNull(),
+                "position": NSNull()
             ]
 
-            self.layer.addSublayer(layer)
+            let strokingPath = shapeLayer.path?.copy(strokingWithWidth: shapeLayer.lineWidth, lineCap: .butt, lineJoin: .miter, miterLimit: shapeLayer.miterLimit)
+            // Otherwise bounds will be equal to CGRectZero.
+            shapeLayer.bounds = strokingPath!.boundingBoxOfPath
+
+            layer.addSublayer(shapeLayer)
         }
 
-        self.top.anchorPoint = CGPointMake(28.0 / 30.0, 0.5)
-        self.top.position = CGPointMake(40, 18)
-
-        self.middle.position = CGPointMake(27, 27)
-       self.middle.strokeStart = hamburgerStrokeStart
-        self.middle.strokeEnd = hamburgerStrokeEnd
-
-        self.bottom.anchorPoint = CGPointMake(28.0 / 30.0, 0.5)
-        self.bottom.position = CGPointMake(40, 36)
+        let widthMiddle = width / 2
+        top.position = CGPoint(x: widthMiddle, y: topYPosition)
+        middle.position = CGPoint(x: widthMiddle, y: middleYPosition)
+        bottom.position = CGPoint(x: widthMiddle, y: bottomYPosition)
+    }
+    
+    public override var intrinsicContentSize: CGSize {
+        return CGSize(width: width, height: height)
     }
 
-    var showsMenu: Bool = false {
+    public var showsMenu: Bool = false {
         didSet {
-            let strokeStart = CABasicAnimation(keyPath: "strokeStart")
-            let strokeEnd = CABasicAnimation(keyPath: "strokeEnd")
+            // There's many animations so it's easier to set up duration and timing function at once.
+            CATransaction.begin()
+            CATransaction.setAnimationDuration(0.4)
+            CATransaction.setAnimationTimingFunction(CAMediaTimingFunction(controlPoints: 0.4, 0.0, 0.2, 1.0))
 
-            if self.showsMenu {
-                strokeStart.toValue = menuStrokeStart
-                strokeStart.duration = 0.5
-                strokeStart.timingFunction = CAMediaTimingFunction(controlPoints: 0.25, -0.4, 0.5, 1)
+            let strokeStartNewValue: CGFloat = showsMenu ? 0.0 : 0.3
+            let positionPathControlPointY = bottomYPosition / 2
+            let verticalOffsetInRotatedState: CGFloat = 0.75
 
-                strokeEnd.toValue = menuStrokeEnd
-                strokeEnd.duration = 0.6
-                strokeEnd.timingFunction = CAMediaTimingFunction(controlPoints: 0.25, -0.4, 0.5, 1)
-            } else {
-                strokeStart.toValue = hamburgerStrokeStart
-                strokeStart.duration = 0.5
-                strokeStart.timingFunction = CAMediaTimingFunction(controlPoints: 0.25, 0, 0.5, 1.2)
-                strokeStart.beginTime = CACurrentMediaTime() + 0.1
-                strokeStart.fillMode = kCAFillModeBackwards
 
-                strokeEnd.toValue = hamburgerStrokeEnd
-                strokeEnd.duration = 0.6
-                strokeEnd.timingFunction = CAMediaTimingFunction(controlPoints: 0.25, 0.3, 0.5, 0.9)
-            }
+            let topRotation = CAKeyframeAnimation(keyPath: "transform")
+            topRotation.values = rotationValuesFromTransform(transform: top.transform,
+                endValue: showsMenu ? CGFloat(-M_PI - M_PI_4) : CGFloat(M_PI + M_PI_4))
+            // Kind of a workaround. Used because it was hard to animate positions of segments' such that their ends form the arrow's tip and don't cross each other.
+            topRotation.calculationMode = CAAnimationCalculationMode.cubic
+            topRotation.keyTimes = [0.0, 0.33, 0.73, 1.0]
+            top.ahk_applyKeyframeValuesAnimation(animation: topRotation)
 
-            self.middle.ocb_applyAnimation(strokeStart)
-            self.middle.ocb_applyAnimation(strokeEnd)
+            let topPosition = CAKeyframeAnimation(keyPath: "position")
+            let topPositionEndPoint = CGPoint(x: width / 2, y: showsMenu ? topYPosition : bottomYPosition + verticalOffsetInRotatedState)
+            topPosition.path = quadBezierCurveFromPoint(startPoint: top.position,
+                toPoint: topPositionEndPoint,
+                controlPoint: CGPoint(x: width, y: positionPathControlPointY)).cgPath
+            top.ahk_applyKeyframePathAnimation(animation: topPosition, endValue: NSValue(cgPoint: topPositionEndPoint))
 
-            let topTransform = CABasicAnimation(keyPath: "transform")
-            topTransform.timingFunction = CAMediaTimingFunction(controlPoints: 0.5, -0.8, 0.5, 1.85)
-            topTransform.duration = 0.4
-            topTransform.fillMode = kCAFillModeBackwards
+            top.strokeStart = strokeStartNewValue
 
-            let bottomTransform = topTransform.copy() as! CABasicAnimation
 
-            if self.showsMenu {
-                let translation = CATransform3DMakeTranslation(-4, 0, 0)
+            let middleRotation = CAKeyframeAnimation(keyPath: "transform")
+            middleRotation.values = rotationValuesFromTransform(transform: middle.transform,
+                endValue: showsMenu ? CGFloat(-M_PI) : CGFloat(M_PI))
+            middle.ahk_applyKeyframeValuesAnimation(animation: middleRotation)
 
-                topTransform.toValue = NSValue(CATransform3D: CATransform3DRotate(translation, -0.7853975, 0, 0, 1))
-                topTransform.beginTime = CACurrentMediaTime() + 0.25
+            middle.strokeEnd = showsMenu ? 1.0 : 0.85
 
-                bottomTransform.toValue = NSValue(CATransform3D: CATransform3DRotate(translation, 0.7853975, 0, 0, 1))
-                bottomTransform.beginTime = CACurrentMediaTime() + 0.25
-            } else {
-                topTransform.toValue = NSValue(CATransform3D: CATransform3DIdentity)
-                topTransform.beginTime = CACurrentMediaTime() + 0.05
 
-                bottomTransform.toValue = NSValue(CATransform3D: CATransform3DIdentity)
-                bottomTransform.beginTime = CACurrentMediaTime() + 0.05
-            }
+            let bottomRotation = CAKeyframeAnimation(keyPath: "transform")
+            bottomRotation.values = rotationValuesFromTransform(transform: bottom.transform,
+                endValue: showsMenu ? CGFloat(-M_PI_2 - M_PI_4) : CGFloat(M_PI_2 + M_PI_4))
+            bottomRotation.calculationMode = CAAnimationCalculationMode.cubic
+            bottomRotation.keyTimes = [0.0, 0.33, 0.63, 1.0]
+            bottom.ahk_applyKeyframeValuesAnimation(animation: bottomRotation)
 
-            self.top.ocb_applyAnimation(topTransform)
-            self.bottom.ocb_applyAnimation(bottomTransform)
+            let bottomPosition = CAKeyframeAnimation(keyPath: "position")
+            let bottomPositionEndPoint = CGPoint(x: width / 2, y: showsMenu ? bottomYPosition : topYPosition - verticalOffsetInRotatedState)
+            bottomPosition.path = quadBezierCurveFromPoint(startPoint: bottom.position,
+                toPoint: bottomPositionEndPoint,
+                controlPoint: CGPoint(x: 0, y: positionPathControlPointY)).cgPath
+            bottom.ahk_applyKeyframePathAnimation(animation: bottomPosition, endValue: NSValue(cgPoint: bottomPositionEndPoint))
+
+            bottom.strokeStart = strokeStartNewValue
+
+
+            CATransaction.commit()
         }
     }
 
-    var top: CAShapeLayer! = CAShapeLayer()
-    var bottom: CAShapeLayer! = CAShapeLayer()
-    var middle: CAShapeLayer! = CAShapeLayer()
+    private var shapeLayers: [CAShapeLayer] {
+        return [top, middle, bottom]
+    }
 }
 
 extension CALayer {
-    func ocb_applyAnimation(animation: CABasicAnimation) {
-        let copy = animation.copy() as! CABasicAnimation
+    func ahk_applyKeyframeValuesAnimation(animation: CAKeyframeAnimation) {
+        guard let copy = animation.copy() as? CAKeyframeAnimation,
+            let values = copy.values,
+            !values.isEmpty,
+              let keyPath = copy.keyPath else { return }
 
-        if copy.fromValue == nil {
-            copy.fromValue = self.presentationLayer()!.valueForKeyPath(copy.keyPath!)
-        }
-
-        self.addAnimation(copy, forKey: copy.keyPath)
-        self.setValue(copy.toValue, forKeyPath:copy.keyPath!)
+        self.add(copy, forKey: keyPath)
+        self.setValue(values[values.count - 1], forKeyPath:keyPath)
     }
+
+    // Mark: TODO: endValue could be removed from the definition, because it's possible to get it from the path (see: CGPathApply).
+    func ahk_applyKeyframePathAnimation(animation: CAKeyframeAnimation, endValue: NSValue) {
+        let copy = animation.copy() as! CAKeyframeAnimation
+
+        self.add(copy, forKey: copy.keyPath)
+        self.setValue(endValue, forKeyPath:copy.keyPath!)
+    }
+}
+
+func rotationValuesFromTransform(transform: CATransform3D, endValue: CGFloat) -> [NSValue] {
+    let frames = 4
+
+    // values at 0, 1/3, 2/3 and 1
+    return (0..<frames).map { num in
+        NSValue(caTransform3D: CATransform3DRotate(transform, endValue / CGFloat(frames - 1) * CGFloat(num), 0, 0, 1))
+    }
+}
+
+func quadBezierCurveFromPoint(startPoint: CGPoint, toPoint: CGPoint, controlPoint: CGPoint) -> UIBezierPath {
+    let quadPath = UIBezierPath()
+    quadPath.move(to: startPoint)
+    quadPath.addQuadCurve(to: toPoint, controlPoint: controlPoint)
+    return quadPath
 }

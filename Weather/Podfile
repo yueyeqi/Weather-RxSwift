@@ -1,13 +1,13 @@
 use_frameworks!
 
-target 'Weather'
-
-pod 'Moya/RxSwift'
-pod 'RxSwift'
-pod 'RxCocoa'
-pod 'RxDataSources'
-pod 'Alamofire'
-pod 'pop'
-pod "Moya-SwiftyJSONMapper/RxSwift"
-pod 'MBProgressHUD'
-pod 'TZImagePickerController'
+target 'Weather' do
+  pod 'Moya/RxSwift'
+  pod 'RxSwift'
+  pod 'RxCocoa'
+  pod 'RxDataSources'
+  pod 'Alamofire'
+  pod 'pop'
+  pod 'ObjectMapper'
+  pod 'MBProgressHUD'
+  pod 'TZImagePickerController'
+end

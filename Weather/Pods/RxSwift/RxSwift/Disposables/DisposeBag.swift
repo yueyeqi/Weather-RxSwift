@@ -1,21 +1,17 @@
 //
 //  DisposeBag.swift
-//  Rx
+//  RxSwift
 //
 //  Created by Krunoslav Zaher on 3/25/15.
 //  Copyright © 2015 Krunoslav Zaher. All rights reserved.
 //
 
-import Foundation
-
 extension Disposable {
-    /**
-    Adds `self` to `bag`.
-    
-    - parameter bag: `DisposeBag` to add `self` to.
-    */
-    public func addDisposableTo(bag: DisposeBag) {
-        bag.addDisposable(self)
+    /// Adds `self` to `bag`
+    ///
+    /// - parameter bag: `DisposeBag` to add `self` to.
+    public func disposed(by bag: DisposeBag) {
+        bag.insert(self)
     }
 }
 
@@ -31,46 +27,40 @@ or create a new one in its place.
 
 In case explicit disposal is necessary, there is also `CompositeDisposable`.
 */
-public class DisposeBag: DisposeBase {
+public final class DisposeBag: DisposeBase {
     
     private var _lock = SpinLock()
     
     // state
-    private var _disposables = [Disposable]()
-    private var _disposed = false
+    fileprivate var _disposables = [Disposable]()
+    fileprivate var _isDisposed = false
     
-    /**
-    Constructs new empty dispose bag.
-    */
+    /// Constructs new empty dispose bag.
     public override init() {
         super.init()
     }
-    
-    /**
-    Adds `disposable` to be disposed when dispose bag is being deinited.
-    
-    - parameter disposable: Disposable to add.
-    */
-    public func addDisposable(disposable: Disposable) {
-        _addDisposable(disposable)?.dispose()
-    }
 
-    private func _addDisposable(disposable: Disposable) -> Disposable? {
-        _lock.lock(); defer { _lock.unlock() }
-        if _disposed {
+    /// Adds `disposable` to be disposed when dispose bag is being deinited.
+    ///
+    /// - parameter disposable: Disposable to add.
+    public func insert(_ disposable: Disposable) {
+        self._insert(disposable)?.dispose()
+    }
+    
+    private func _insert(_ disposable: Disposable) -> Disposable? {
+        self._lock.lock(); defer { self._lock.unlock() }
+        if self._isDisposed {
             return disposable
         }
 
-        _disposables.append(disposable)
+        self._disposables.append(disposable)
 
         return nil
     }
 
-    /**
-    This is internal on purpose, take a look at `CompositeDisposable` instead.
-    */
+    /// This is internal on purpose, take a look at `CompositeDisposable` instead.
     private func dispose() {
-        let oldDisposables = _dispose()
+        let oldDisposables = self._dispose()
 
         for disposable in oldDisposables {
             disposable.dispose()
@@ -78,17 +68,47 @@ public class DisposeBag: DisposeBase {
     }
 
     private func _dispose() -> [Disposable] {
-        _lock.lock(); defer { _lock.unlock() }
+        self._lock.lock(); defer { self._lock.unlock() }
 
-        let disposables = _disposables
+        let disposables = self._disposables
         
-        _disposables.removeAll(keepCapacity: false)
-        _disposed = true
+        self._disposables.removeAll(keepingCapacity: false)
+        self._isDisposed = true
         
         return disposables
     }
     
     deinit {
-        dispose()
+        self.dispose()
+    }
+}
+
+extension DisposeBag {
+
+    /// Convenience init allows a list of disposables to be gathered for disposal.
+    public convenience init(disposing disposables: Disposable...) {
+        self.init()
+        self._disposables += disposables
+    }
+
+    /// Convenience init allows an array of disposables to be gathered for disposal.
+    public convenience init(disposing disposables: [Disposable]) {
+        self.init()
+        self._disposables += disposables
+    }
+
+    /// Convenience function allows a list of disposables to be gathered for disposal.
+    public func insert(_ disposables: Disposable...) {
+        self.insert(disposables)
+    }
+
+    /// Convenience function allows an array of disposables to be gathered for disposal.
+    public func insert(_ disposables: [Disposable]) {
+        self._lock.lock(); defer { self._lock.unlock() }
+        if self._isDisposed {
+            disposables.forEach { $0.dispose() }
+        } else {
+            self._disposables += disposables
+        }
     }
 }
